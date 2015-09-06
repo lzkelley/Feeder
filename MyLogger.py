@@ -9,13 +9,12 @@ Functions
 ---------
     _getLogger    : Create a standard logger object which logs to file and or stdout stream.
     defaultLogger : Create a basic ``logging.Logger`` object, logging to stream and file.
+    _checkPath : 
 
 """
 
-import logging, inspect
+import logging, inspect, os
 import numpy as np
-
-import zcode.InOut as zio
 
 class IndentFormatter(logging.Formatter):
     """
@@ -82,7 +81,7 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
     ## Log to file
     #  -----------
     if( tofile is not None ):
-        zio.checkPath(tofile)
+        _checkPath(tofile)
 
         # Create default formatting for file output
         if( fileFmt is None ):
@@ -147,4 +146,17 @@ def defaultLogger(logger=None, filename='log', verbose=False, debug=False):
     return logger
 
 # defaultLogger()
+
+
+def _checkPath(tpath):
+    """
+    Create the given filepath if it doesn't already exist.
+    """
+    path,name = os.path.split(tpath)
+    if( len(path) > 0 ):
+        if( not os.path.isdir(path) ): os.makedirs(path)
+
+    return path
+
+# _checkPath()
 
