@@ -13,7 +13,9 @@ Functions
 """
 
 import logging, inspect
+import numpy as np
 
+import zcode.InOut as zio
 
 class IndentFormatter(logging.Formatter):
     """
@@ -80,6 +82,8 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
     ## Log to file
     #  -----------
     if( tofile is not None ):
+        zio.checkPath(tofile)
+
         # Create default formatting for file output
         if( fileFmt is None ):
             fileFmt  = "%(asctime)s %(levelname)8.8s [%(filename)20.20s:"
