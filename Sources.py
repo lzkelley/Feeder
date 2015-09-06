@@ -42,6 +42,25 @@ sources = [
            "Top News"),
     Source("http://feeds.bbci.co.uk/news/rss.xml",
            "BBC News",
-           "Top News")
+           "Top News"),
+    Source("http://feeds.foxnews.com/foxnews/latest",
+           "Fox News",
+           "Latest News"),
+    Source("http://www.forbes.com/real-time/feed2/",
+           "Forbes",
+           "Latest Headlines"),
+    Source("http://feeds.foxnews.com/foxnews/latest",
+           "Fox News",
+           "Latest News"),
+    Source("http://www.ft.com/rss/home/us",
+           "Financial Times",
+           "US Home"),
+    Source("http://feeds.abcnews.com/abcnews/topstories",
+           "ABC News",
+           "Top Stores"),
+    Source("http://www.theguardian.com/uk/rss",
+           "The Guardian",
+           "UK Home")
     ]
+
 
