@@ -9,12 +9,12 @@ Functions
 ---------
     _getLogger    : Create a standard logger object which logs to file and or stdout stream.
     defaultLogger : Create a basic ``logging.Logger`` object, logging to stream and file.
-    _checkPath : 
 
 """
 
 import logging, inspect, os
 import numpy as np
+import Utils
 
 class IndentFormatter(logging.Formatter):
     """
@@ -81,7 +81,7 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
     ## Log to file
     #  -----------
     if( tofile is not None ):
-        _checkPath(tofile)
+        Utils.checkPath(tofile)
 
         # Create default formatting for file output
         if( fileFmt is None ):
@@ -114,7 +114,7 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
 
 
 
-def defaultLogger(logger=None, filename='log', verbose=False, debug=False):
+def defaultLogger(logger=None, filename=None, verbose=False, debug=False):
     """
     Create a basic ``logging.Logger`` object, logging to stream and file.
     
@@ -147,16 +147,4 @@ def defaultLogger(logger=None, filename='log', verbose=False, debug=False):
 
 # defaultLogger()
 
-
-def _checkPath(tpath):
-    """
-    Create the given filepath if it doesn't already exist.
-    """
-    path,name = os.path.split(tpath)
-    if( len(path) > 0 ):
-        if( not os.path.isdir(path) ): os.makedirs(path)
-
-    return path
-
-# _checkPath()
 
