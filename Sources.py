@@ -1,6 +1,26 @@
 """
 
+Objects
+-------
+    Source
+
+
+Functions
+---------
+    main :
+    _getLogger :
+    _getArgs :
+
+    
+
 """
+
+
+import MyLogger, Settings
+
+__version__ = 0.1
+
+
 
 class Source(object):
     
@@ -9,6 +29,7 @@ class Source(object):
         self.title = title
         self.subtitle = subtitle
         self.name = self.title + " " + self.subtitle
+        self.version = __version__
 
     def __str__(self):
         return self.name
@@ -16,6 +37,41 @@ class Source(object):
 
 # } class Source
 
+'''
+class Sources(object):
+
+    import json
+
+    def __init__(self):
+        
+
+# } class Sources
+'''
+
+
+
+
+
+def main(sets=None, log=None):
+    """
+
+    """
+
+    sets = Settings.getSettings(sets)
+    log = _getLogger(log, sets)
+    log.info("main()")
+    log.debug("version = '%s'" % str(__version__))
+    log.debug("Settings version = '%s'" % (str(sets.version)))
+
+    log.debug("Getting command line arguments")
+    parser = Settings.getParser(sets)
+    args, sets = Settings.getArgs(parser, sets)
+
+    log.info("done.")
+
+    return
+
+# } main()
 
 
 sources = [ 
@@ -64,3 +120,17 @@ sources = [
     ]
 
 
+
+def _getLogger(log, sets):
+    """
+    Get a standard ``logging.Logger`` object for ``Sources.py``.
+    """
+    filename = sets.dir_log + "Sources.log"
+    log = MyLogger.defaultLogger(log, filename=filename, verbose=sets.verbose, debug=sets.debug)
+    return log
+# } _getLogger()
+
+
+
+
+if( __name__ == "__main__" ): main()
