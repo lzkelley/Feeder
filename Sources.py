@@ -2,15 +2,16 @@
 
 Objects
 -------
+    SRC
+    KEYS_SAVE
     Source
+    Sources
 
 
 Functions
 ---------
     main :
     _getLogger :
-    _getArgs :
-
     
 
 """
@@ -177,15 +178,7 @@ class Sources(object):
         """
         self.data = self.data[self.data.xs(SRC.HTML,axis=1) != html]
         return
-    # } remove() 
-
-
-    def addAll(self):
-        for src in sources:
-            self.add(src.html, src.title, src.subtitle)
-
-        return
-        
+    # } remove()         
 
 # } class Sources
 
@@ -221,52 +214,6 @@ def main(sets=None, log=None):
     return
 
 # } main()
-
-
-sources = [ 
-    Source("http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml", 
-           "NewYork Times", 
-           "HomePage"),
-    Source("http://www.npr.org/rss/rss.php?id=1001", 
-           "NPR", 
-           "News"),
-    Source("http://feeds.washingtonpost.com/rss/world",
-           "Washingtong Post",
-           "World"),
-    Source("http://rss.cnn.com/rss/cnn_topstories.rss",
-           "CNN",
-           "Top Stories"),
-    Source("http://hosted2.ap.org/atom/APDEFAULT/3d281c11a96b4ad082fe88aa0db04305",
-           "Associated Press",
-           "Top Headlines"),
-    Source("http://rssfeeds.usatoday.com/usatoday-NewsTopStories",
-           "USA Today",
-           "News Top Stories"),
-    Source("http://feeds.reuters.com/reuters/topNews",
-           "Reuters",
-           "Top News"),
-    Source("http://feeds.bbci.co.uk/news/rss.xml",
-           "BBC News",
-           "Top News"),
-    Source("http://feeds.foxnews.com/foxnews/latest",
-           "Fox News",
-           "Latest News"),
-    Source("http://www.forbes.com/real-time/feed2/",
-           "Forbes",
-           "Latest Headlines"),
-    Source("http://feeds.foxnews.com/foxnews/latest",
-           "Fox News",
-           "Latest News"),
-    Source("http://www.ft.com/rss/home/us",
-           "Financial Times",
-           "US Home"),
-    Source("http://feeds.abcnews.com/abcnews/topstories",
-           "ABC News",
-           "Top Stores"),
-    Source("http://www.theguardian.com/uk/rss",
-           "The Guardian",
-           "UK Home")
-    ]
 
 
 
