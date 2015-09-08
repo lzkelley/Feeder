@@ -19,10 +19,25 @@ import argparse
 __version__ = 0.1
 
 
+
 class Settings(object):
+    """
+
+    """
+
+    ## Implement as Singleton
+    #  ----------------------
+    __instance = None
+    def __new__(cls):
+        if cls.__instance == None:
+            cls.__instance = object.__new__(cls)
+        return cls.__instance
+
 
     def __init__(self):
-
+        """
+        """
+        
         ## Basic Parameters
         #  ----------------
         self.verbose = True
@@ -33,26 +48,16 @@ class Settings(object):
         self.dir_log = "./log/"
         self.dir_data = "./data/"
         
-        self.file_src = self.dir_data + "sources.json"
+        # self.file_src = self.dir_data + "sources.json"
+        self.file_sources = self.dir_data + "sources.conf"
         
 
         ## Internal Parameters
         #  -------------------
         self.version = __version__
-        
 
 
 # } class Settings
-
-
-def getSettings(sets=None):
-    """
-    Get a Settings object.
-    """
-    if( isinstance(sets, Settings) ): return sets
-    else: sets = Settings()
-    return sets
-# } getSettings()
 
 
 
