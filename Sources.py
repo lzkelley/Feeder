@@ -40,6 +40,7 @@ class KEYS_SAVE(object):
     VERS = 'version'
     DTCR = 'datetime_created'
     DTSV = 'datetime_saved'
+    SVLS = 'savefile_list'
 
 # } class KEYS_SAVE
 
@@ -73,7 +74,7 @@ class Sources(object):
     ---------
         load :
         save :
-        clean : 
+        clean :
         add  :
         delete :
         _del_url :
@@ -89,7 +90,8 @@ class Sources(object):
         if( fname is None and sets is not None ):
             fname = sets.file_src
 
-        # Load data from save file
+        ## Load data from save file
+        #  ------------------------
         if( fname is not None ):
             log.debug("Loading")
             retval = self.load(fname, log)
@@ -102,13 +104,16 @@ class Sources(object):
                 log.error(errStr)
                 raise RuntimeError(errStr)
 
-        # Initialize empty DataFrame
+        ## Initialize empty
+        #  ----------------
         else:
             log.debug("Initializing new Sources DataFrame")
             self.data = pandas.DataFrame(columns=SOURCES_COLUMNS)
             self.version = __version__
             self.datetime_created = str(datetime.now())
             self.datetime_saved = None
+            self.savefile_list = []
+            self.savefile = None
             log.debug("Created")
 
         return
@@ -142,6 +147,8 @@ class Sources(object):
             self.version = loadData[KEYS_SAVE.VERS]
             self.datetime_created = loadData[KEYS_SAVE.DTCR]
             self.datetime_saved = loadData[KEYS_SAVE.DTSV]
+            self.savefile_list = loadData[KEYS_SAVE.SVLS]
+            self.savefile = fname
             retval = True
 
 
@@ -150,9 +157,18 @@ class Sources(object):
     # } load()
 
 
-    def save(self, fname, log):
+    def save(self, log, fname=None):
         """
         """
+
+        retval = False
+
+        if( fname is None ):
+            if( self.savefile is not None ): fname = self.savefile
+            else:
+                log.error("``savefile`` is not set, ``fname`` must be provided!")
+                return retval
+
 
         log.debug("save()")
         Utils.checkPath(fname)
@@ -167,11 +183,17 @@ class Sources(object):
         with open(fname, 'w') as saveFile:
             json.dump(saveDict, saveFile)
 
-        log.info("Saved to '%s'" % (fname))
+        if( os.path.exists(fname) ):
+            retval = True
 
-        return
+            log.info("Saved to '%s'" % (fname))
+            if( not fname in self.savefile_list ):
+                self.savefile_list.append(fname)
+
+        return retval
 
     # } save()
+
 
     def clean(self, log):
         """
@@ -181,7 +203,7 @@ class Sources(object):
         # must convert to integer before reindexing! (not sure why...)
         self.data.index = self.data.index.astype(int)
         self.data = self.data.reindex(index=np.arange(len(self.data)))
-        return 
+        return
 
     # } clean()
 
@@ -202,9 +224,9 @@ class Sources(object):
         """
         Remove an entry from the sources DataFrame.
         """
-        
+
         if( interactive ):
-            
+
             resp = raw_input
 
         return
@@ -230,12 +252,12 @@ class Sources(object):
         log.debug("list()")
 
         for id,src in self.data.sort().iterrows():
-            print self._str_row(src=src)
+            print self._str_row(id, src=src)
 
         return
     # } list()
 
-    def _str_row(self, index=None, src=None):
+    def _str_row(self, index, src=None):
         """
         """
         if( src is None ):
@@ -245,9 +267,11 @@ class Sources(object):
                 raise RuntimeError("Either ``index`` or ``src`` must be provided!")
 
         tstr = src[SRC.TIT]
-        if( len(src[SRC.SUB]) > 0 ): tstr += " - " + src[SRC.SUB]
+        if( isinstance(src[SRC.SUB], str) ):
+            if( len(src[SRC.SUB]) > 0 ): tstr += " - " + src[SRC.SUB]
+
         pstr = "{0:>4d} : {1:{twid}.{twid}}   {2:{uwid}.{uwid}s}"
-        pstr = pstr.format(id, tstr, src[SRC.URL], twid=40, uwid=60)
+        pstr = pstr.format(index, tstr, src[SRC.URL], twid=40, uwid=60)
 
         return pstr
 
@@ -302,7 +326,7 @@ def _interactive(sources, log, sets):
     """
     log.info("_interactive()")
 
-    prompt = "\tAction?  [q]uit, [a]dd, [d]elete, [l]ist, [s]earch, [h]elp : "
+    prompt = "\tAction?  [q]uit, [a]dd, [d]elete, [l]ist, [f]ind, [s]ave, [h]elp : "
     while( True ):
         arg = raw_input(prompt)
         arg = arg.strip().lower()
@@ -316,8 +340,10 @@ def _interactive(sources, log, sets):
             _inter_del(sources, log)
         elif( arg.startswith('l') ):
             _inter_list(sources, log)
+        elif( arg.startswith('f') ):
+            _inter_find(sources, log)
         elif( arg.startswith('s') ):
-            _inter_search(sources, log)
+            _inter_save(sources, log)
         elif( arg.startswith('h') ):
             _inter_help(sources, log)
         else:
@@ -392,12 +418,59 @@ def _inter_list(sources, log):
 # } _inter_list()
 
 
-def _inter_search(sources, log):
-    log.debug("_inter_search()")
+def _inter_find(sources, log):
+    log.debug("_inter_find()")
 
     return
 
-# } _inter_search()
+# } _inter_find()
+
+
+def _inter_save(sources, log):
+    """
+    """
+    log.debug("_inter_save()")
+
+    FILE_TYPE = '.json'
+
+    saveName = None
+    if( sources.savefile is not None ):
+        arg = raw_input("\tSave to loaded filename '%s' ? y/[n] : " % (sources.savefile))
+        arg = arg.strip().lower()
+        if( arg.startswith('q') ):
+            log.debug("arg '%s', canceling save" % (arg))
+            return
+        elif( arg.startswith('y') ):
+            saveName = sources.savefile
+
+
+    while( saveName is None ):
+        saveName = raw_input("\tEnter (json) save filename : ").strip()
+        if( saveName.lower() == 'q' ):
+            log.debug("saveName '%s', canceling save" % (saveName))
+            return
+        elif( not saveName.lower().endswith(FILE_TYPE) ):
+            saveName += FILE_TYPE
+
+        if( os.path.exists(saveName) ):
+            arg = raw_input("\tFile '%s' already exists, overwrite? y/[n] : ")
+            arg = arg.strip().lower()
+            if( arg.startswith('q') ):
+                log.debug("arg '%s', canceling save" % (arg))
+                return
+            elif( arg.startswith('y') ):
+                break
+            else:
+                saveName = None
+
+
+    print "SAVENAME = ", saveName
+
+
+    return
+
+# } _inter_save()
+
 
 
 def _inter_help(sources, log):
