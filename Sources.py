@@ -16,15 +16,19 @@ Functions
 
 """
 
-import json, pandas, os
+# import json, pandas
+import os
+from configobj import ConfigObj
 import MyLogger, Settings, Utils
 from enum import Enum
 from datetime import datetime
 import numpy as np
 
+import zcode.InOut as zio
+
 __version__ = 0.1
 
-
+'''
 class SRC(object):
     """
     Column keys for Sources `DataFrame`.
@@ -33,8 +37,9 @@ class SRC(object):
     TIT = 'title'
     SUB = 'subtitle'
 # } class SRC_COL
+'''
 
-
+'''
 class KEYS_SAVE(object):
     DATA = 'data'
     VERS = 'version'
@@ -44,8 +49,17 @@ class KEYS_SAVE(object):
 
 # } class KEYS_SAVE
 
-
 SOURCES_COLUMNS = [ SRC.URL, SRC.TIT, SRC.SUB ]
+'''
+
+class SOURCES_KEYS(object):
+    VERS = 'version'
+    SAVE_LIST = 'savefile_list'
+    SOURCES_URL = 'sources_url'
+    SOURCES_TITLE = 'sources_title'
+    SOURCES_SUBTITLE = 'sources_subtitle'
+
+
 
 class Source(object):
 
@@ -85,116 +99,151 @@ class Sources(object):
         """
 
         """
-        log = _getLogger(log, sets)
+        # Load settings (singleton)
+        if( sets is None ): sets = Settings.Settings()
+        self.log = _getLogger(log, sets)
+        # Set default filename
+        if( fname is None ): fname = sets.file_sources
 
-        if( fname is None and sets is not None ):
-            fname = sets.file_src
+        loaded = False
 
-        ## Load data from save file
-        #  ------------------------
-        if( fname is not None ):
-            log.debug("Loading")
-            retval = self.load(fname, log)
+        # Load data from save file
+        if( os.path.exists(fname) ):
+            self.log.debug("Loading from '%s'" % (fname))
+            retval = self.load(fname)
             if( retval ):
-                log.debug(" - Loaded  v%s" % (str(self.version)))
-                log.debug(" - Created %s" % (self.datetime_created))
-                log.debug(" - Saved   %s" % (self.datetime_saved))
+                self.log.debug(" - Loaded  v%s" % (str(self.version)))
+                loaded = True
             else:
                 errStr = "Load Failed!"
-                log.error(errStr)
+                self.log.error(errStr)
                 raise RuntimeError(errStr)
-
-        ## Initialize empty
-        #  ----------------
         else:
-            log.debug("Initializing new Sources DataFrame")
-            self.data = pandas.DataFrame(columns=SOURCES_COLUMNS)
-            self.version = __version__
-            self.datetime_created = str(datetime.now())
-            self.datetime_saved = None
-            self.savefile_list = []
-            self.savefile = None
-            log.debug("Created")
+            self.log.warning("File '%s' does not exist!" % (fname))
+
+
+        # Create new
+        if( not loaded ):
+
+            # initialize values
+            self.log.warning("Initializing new Sources")
+            self.new()
+            # save
+            self.log.info("Saving")
+            retval = self.save(fname=fname)
+            if( not retval ): self.log.error("Error, not saved!!")
 
         return
 
     # } __init__()
 
 
-    def load(self, fname, log):
+    def new(self, inter=True):
+        """
+        """
+        self.log.debug("new()")
+
+        if( inter ):
+            confirm = self._confirm_unsaved()
+            if( not confirm ): return False
+
+        self.version = __version__
+        self.savefile_list = []
+        self.savefile = None
+
+        self.sources_url = []
+        self.sources_title = []
+        self.sources_subtitle = []
+
+        self.saved = True
+        self.count = 0
+
+        return True
+
+    # } new()
+
+
+    def load(self, fname, inter=True):
         """
         """
 
-        log.debug("load()")
+        self.log.debug("load()")
+
+        if( inter ):
+            confirm = self._confirm_unsaved()
+            if( not confirm ): return False
 
         ## Try to load file and convert to DataFrame
         #  -----------------------------------------
         try:
-            log.debug("Loading from '%s'" % (fname))
-            loadFile = open(fname, 'r')
-            loadData = json.load(loadFile)
-            self.data = pandas.DataFrame.from_dict(loadData[KEYS_SAVE.DATA])
+            self.log.debug("Loading from '%s'" % (fname))
+            config = ConfigObj(fname)
+            self.version = config[SOURCES_KEYS.VERS]
+            self.savefile_list = config[SOURCES_KEYS.SAVE_LIST]
+            self.sources_url = config[SOURCES_KEYS.SOURCES_URL]
+            self.sources_title = config[SOURCES_KEYS.SOURCES_TITLE]
+            self.sources_subtitle = config[SOURCES_KEYS.SOURCES_SUBTITLE]
         except:
             import sys
-            log.warning("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
+            self.log.error("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
             retval = False
-
-        ## Store Data on Success
-        #  ---------------------
         else:
-            # Reindex converting to integer type
-            self.clean(log)
-            self.version = loadData[KEYS_SAVE.VERS]
-            self.datetime_created = loadData[KEYS_SAVE.DTCR]
-            self.datetime_saved = loadData[KEYS_SAVE.DTSV]
-            self.savefile_list = loadData[KEYS_SAVE.SVLS]
-            self.savefile = fname
             retval = True
-
+            self.savefile = fname
+            self.saved = True
+            self._recount()
 
         return retval
 
     # } load()
 
 
-    def save(self, log, fname=None):
+    def save(self, fname=None):
         """
         """
+        self.log.debug("save()")
 
         retval = False
 
         if( fname is None ):
             if( self.savefile is not None ): fname = self.savefile
             else:
-                log.error("``savefile`` is not set, ``fname`` must be provided!")
+                self.log.error("``savefile`` is not set, ``fname`` must be provided!")
                 return retval
 
 
-        log.debug("save()")
-        Utils.checkPath(fname)
-        self.datetime_saved = str(datetime.now())
+        zio.checkPath(fname)
 
-        saveDict = {}
-        saveDict[KEYS_SAVE.DATA] = self.data.to_dict()
-        saveDict[KEYS_SAVE.VERS] = self.version
-        saveDict[KEYS_SAVE.DTCR] = self.datetime_created
-        saveDict[KEYS_SAVE.DTSV] = self.datetime_saved
 
-        with open(fname, 'w') as saveFile:
-            json.dump(saveDict, saveFile)
+        self.log.debug("Creating ``ConfigObj``")
+        config = ConfigObj()
+        config.filename = fname
+        config[SOURCES_KEYS.VERS] = self.version
+        config[SOURCES_KEYS.SAVE_LIST] = self.savefile_list
+        config[SOURCES_KEYS.SOURCES_URL] = self.sources_url
+        config[SOURCES_KEYS.SOURCES_TITLE] = self.sources_title
+        config[SOURCES_KEYS.SOURCES_SUBTITLE] = self.sources_subtitle
+
+        self.log.debug("Writing ``ConfigObj``")
+        config.write()
+
 
         if( os.path.exists(fname) ):
             retval = True
 
-            log.info("Saved to '%s'" % (fname))
+            self.log.info("Saved to '%s'" % (fname))
+            self.savefile = fname
+            self.saved = True
             if( not fname in self.savefile_list ):
                 self.savefile_list.append(fname)
+
 
         return retval
 
     # } save()
 
 
+    '''
     def clean(self, log):
         """
         Perform cleaning operations on DataFrame.
@@ -206,28 +255,44 @@ class Sources(object):
         return
 
     # } clean()
+    '''
+
+    def add(self, url, title='', subtitle='', check=True):
+        """
+        Add an entry to sources.
+        """
+        self.log.debug("add()")
+
+        if( check and not zio.checkURL(url) ):
+            self.log.warning("URL '%s' does not exist!" % (url))
+            return False
+
+        self.sources_url.append(url)
+        self.sources_title.append(title)
+        self.sources_subtitle.append(subtitle)
+
+        if( not self._recount() ):
+            self.sources_url.pop()
+            self.sources_title.pop()
+            self.sources_subtitle.pop()
+            return False
 
 
-    def add(self, url, title='', subtitle=''):
-        """
-        Add an entry to the sources DataFrame.
-        """
-        temp = pandas.DataFrame({SRC.URL:[url],
-                                 SRC.TIT:[title],
-                                 SRC.SUB:[subtitle]})
-        self.data = self.data.append(temp, ignore_index=True)
-        return
+        self.saved = False
+        return True
+
     # } add()
 
 
-    def delete(self, index, interactive=False):
+    def delete(self, index, inter=True):
         """
-        Remove an entry from the sources DataFrame.
+        Remove an entry from sources.
         """
+        self.log.debug("delete()")
 
-        if( interactive ):
+        if( inter ):
 
-            resp = raw_input
+            conf = zio.promptYesNo('Are you sure ')
 
         return
 
@@ -244,38 +309,139 @@ class Sources(object):
     # } _del_url()
     '''
 
+    def src(self, index=None):
+        import numbers
+        if( isinstance(index, numbers.Integral) ): 
+            cut = slice(index, index+1)
+            ids = np.arange(index, index+1)
+        elif( np.iterable(index) ): 
+            cut = index
+            ids = index
+        else:
+            if( index is not None ):
+                self.log.error("Unrecognized `index` = '%s'!" % (str(index)))
+                self.log.warning("Returning all entries")
 
-    def list(self, log):
+            cut = slice(None)
+            ids = np.arange(len(self.sources_url))
+
+        urls = np.array(self.sources_url)
+        tits = np.array(self.sources_title)
+        subs = np.array(self.sources_subtitle)
+
+        return ids, zip(urls[cut], tits[cut], subs[cut])
+    # } src()
+
+
+    def list(self, index=None):
         """
         List all sources in DataFrame.
         """
-        log.debug("list()")
+        self.log.debug("list()")
 
-        for id,src in self.data.sort().iterrows():
-            print self._str_row(id, src=src)
+        ids, srcs = self.src(index=index)
+        for id,src in zip(ids, srcs):
+            print "\t",self._str_src(id, src)
 
         return
     # } list()
 
-    def _str_row(self, index, src=None):
+    def _str_src(self, id, src):
         """
         """
-        if( src is None ):
-            if( index is not None ):
-                src = self.data.xs(index)
-            else:
-                raise RuntimeError("Either ``index`` or ``src`` must be provided!")
 
-        tstr = src[SRC.TIT]
-        if( isinstance(src[SRC.SUB], str) ):
-            if( len(src[SRC.SUB]) > 0 ): tstr += " - " + src[SRC.SUB]
+        url,tit,sub = src
+
+        tstr = tit
+        if( len(sub) > 0 ): tstr += " - " + sub
 
         pstr = "{0:>4d} : {1:{twid}.{twid}}   {2:{uwid}.{uwid}s}"
-        pstr = pstr.format(index, tstr, src[SRC.URL], twid=40, uwid=60)
+        pstr = pstr.format(id, tstr, url, twid=40, uwid=60)
 
         return pstr
 
     # } _str_row()
+
+
+
+
+    def _confirm_unsaved(self):
+        if( hasattr(self, 'saved') ):
+            if( not self.saved ):
+                return zio.promptYesNo('This will overwrite unsaved data, are you sure?')
+
+        return True
+
+
+    def _recount(self):
+
+        self.log.debug("_recount()")
+        uselists = [ self.sources_url, self.sources_title, self.sources_subtitle ]
+        counts = [ len(onelist) for onelist in uselists ]
+
+        if( len(set(counts)) == 1 ): self.log.debug("All lists have length %d" % (counts[0]))
+        else:
+            self.log.error("Sources list lengths do not match '%s'!" % (str(counts)))
+            return False
+
+        self.count = counts[0]
+        return True
+
+    # } _recount()
+
+
+    def addAll(self):
+        srclist = [
+            ["http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+             "NewYork Times",
+             "HomePage"],
+            ["http://www.npr.org/rss/rss.php?id=1001",
+             "NPR",
+             "News"],
+            ["http://feeds.washingtonpost.com/rss/world",
+             "Washingtong Post",
+             "World"],
+            ["http://rss.cnn.com/rss/cnn_topstories.rss",
+             "CNN",
+             "Top Stories"],
+            ["http://hosted2.ap.org/atom/APDEFAULT/3d281c11a96b4ad082fe88aa0db04305",
+             "Associated Press",
+             "Top Headlines"],
+            ["http://rssfeeds.usatoday.com/usatoday-NewsTopStories",
+             "USA Today",
+             "News Top Stories"],
+            ["http://feeds.reuters.com/reuters/topNews",
+             "Reuters",
+             "Top News"],
+            ["http://feeds.bbci.co.uk/news/rss.xml",
+             "BBC News",
+             "Top News"],
+            ["http://feeds.foxnews.com/foxnews/latest",
+             "Fox News",
+             "Latest News"],
+            ["http://www.forbes.com/real-time/feed2/",
+             "Forbes",
+             "Latest Headlines"],
+            ["http://feeds.foxnews.com/foxnews/latest",
+             "Fox News",
+             "Latest News"],
+            ["http://www.ft.com/rss/home/us",
+             "Financial Times",
+             "US Home"],
+            ["http://feeds.abcnews.com/abcnews/topstories",
+             "ABC News",
+             "Top Stores"],
+            ["http://www.theguardian.com/uk/rss",
+             "The Guardian",
+             "UK Home"]
+            ]
+
+        for src in srclist:
+            print "Adding ", src[0]
+            self.add( src[0], src[1], src[2], check=False )
+
+        return
+
 
 
 # } class Sources
@@ -483,19 +649,15 @@ def _inter_help(sources, log):
 
 
 
-def _getLogger(log, sets):
+def _getLogger(log=None, sets=None):
     """
     Get a standard ``logging.Logger`` object for ``Sources.py``.
     """
-    if( sets is not None ):
-        useDir = sets.dir_log
-        verbose = sets.verbose
-        debug = sets.debug
+    if( sets is None ): sets = Settings.Settings()
 
-    else:
-        useDir = "./"
-        verbose = True
-        debug = False
+    useDir = sets.dir_log
+    verbose = sets.verbose
+    debug = sets.debug
 
     filename = useDir + "Sources.log"
     log = MyLogger.defaultLogger(log, filename=filename, verbose=verbose, debug=debug)
