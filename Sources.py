@@ -29,9 +29,9 @@ class SRC(object):
     """
     Column keys for Sources `DataFrame`.
     """
-    HTML = 'html'
-    TITL = 'title'
-    SUBT = 'subtitle'
+    URL = 'url'
+    TIT = 'title'
+    SUB = 'subtitle'
 # } class SRC_COL
 
 
@@ -44,12 +44,12 @@ class KEYS_SAVE(object):
 # } class KEYS_SAVE
 
 
-SOURCES_COLUMNS = [ SRC.HTML, SRC.TITL, SRC.SUBT ]
+SOURCES_COLUMNS = [ SRC.URL, SRC.TIT, SRC.SUB ]
 
 class Source(object):
 
-    def __init__(self, html, title, subtitle=""):
-        self.html = html
+    def __init__(self, url, title, subtitle=""):
+        self.url = url
         self.title = title
         self.subtitle = subtitle
         self.name = self.title + " " + self.subtitle
@@ -73,8 +73,10 @@ class Sources(object):
     ---------
         load :
         save :
+        clean : 
         add  :
         delete :
+        _del_url :
 
     """
 
@@ -120,20 +122,23 @@ class Sources(object):
 
         log.debug("load()")
 
+        ## Try to load file and convert to DataFrame
+        #  -----------------------------------------
         try:
             log.debug("Loading from '%s'" % (fname))
             loadFile = open(fname, 'r')
             loadData = json.load(loadFile)
-            print loadData[KEYS_SAVE.DATA]
             self.data = pandas.DataFrame.from_dict(loadData[KEYS_SAVE.DATA])
         except:
             import sys
             log.warning("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
             retval = False
+
+        ## Store Data on Success
+        #  ---------------------
         else:
-            # Convert indices to integer type
-            # self.data.index = self.data.index.astype(int)
-            self.data = self.data.reindex(index=np.arange(len(self.data)))
+            # Reindex converting to integer type
+            self.clean(log)
             self.version = loadData[KEYS_SAVE.VERS]
             self.datetime_created = loadData[KEYS_SAVE.DTCR]
             self.datetime_saved = loadData[KEYS_SAVE.DTSV]
@@ -168,26 +173,55 @@ class Sources(object):
 
     # } save()
 
+    def clean(self, log):
+        """
+        Perform cleaning operations on DataFrame.
+        """
+        log.debug("clean()")
+        # must convert to integer before reindexing! (not sure why...)
+        self.data.index = self.data.index.astype(int)
+        self.data = self.data.reindex(index=np.arange(len(self.data)))
+        return 
 
-    def add(self, html, title='', subtitle=''):
+    # } clean()
+
+
+    def add(self, url, title='', subtitle=''):
         """
         Add an entry to the sources DataFrame.
         """
-        temp = pandas.DataFrame({SRC.HTML:[html],
-                                 SRC.TITL:[title],
-                                 SRC.SUBT:[subtitle]})
+        temp = pandas.DataFrame({SRC.URL:[url],
+                                 SRC.TIT:[title],
+                                 SRC.SUB:[subtitle]})
         self.data = self.data.append(temp, ignore_index=True)
         return
     # } add()
 
 
-    def delete(self, html):
+    def delete(self, index, interactive=False):
         """
         Remove an entry from the sources DataFrame.
         """
-        self.data = self.data[self.data.xs(SRC.HTML,axis=1) != html]
+        
+        if( interactive ):
+            
+            resp = raw_input
+
         return
+
     # } delete()
+
+
+    '''
+    def _del_url(self, url):
+        """
+        Remove an entry from the sources DataFrame using the url address.
+        """
+        self.data = self.data[self.data.xs(SRC.URL,axis=1) != url]
+        return
+    # } _del_url()
+    '''
+
 
     def list(self, log):
         """
@@ -196,15 +230,28 @@ class Sources(object):
         log.debug("list()")
 
         for id,src in self.data.sort().iterrows():
-            tstr = src[SRC.TITL]
-            if( len(src[SRC.SUBT]) > 0 ): tstr += " - " + src[SRC.SUBT]
-            pstr = "{0:>4d} : {1:{twid}.{twid}}   {2:{uwid}.{uwid}s}"
-            pstr = pstr.format(id, tstr, src[SRC.HTML], twid=40, uwid=60)
-            print pstr
+            print self._str_row(src=src)
 
         return
     # } list()
 
+    def _str_row(self, index=None, src=None):
+        """
+        """
+        if( src is None ):
+            if( index is not None ):
+                src = self.data.xs(index)
+            else:
+                raise RuntimeError("Either ``index`` or ``src`` must be provided!")
+
+        tstr = src[SRC.TIT]
+        if( len(src[SRC.SUB]) > 0 ): tstr += " - " + src[SRC.SUB]
+        pstr = "{0:>4d} : {1:{twid}.{twid}}   {2:{uwid}.{uwid}s}"
+        pstr = pstr.format(id, tstr, src[SRC.URL], twid=40, uwid=60)
+
+        return pstr
+
+    # } _str_row()
 
 
 # } class Sources
@@ -291,24 +338,24 @@ def _inter_add(sources, log):
 
     log.debug("_inter_add()")
 
-    # HTML
+    # URL
     example = 'http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'
     while( True ):
-        html = raw_input("\tHTML (e.g. '%s') : " % (example))
-        html = html.strip().lower()
+        url = raw_input("\tURL (e.g. '%s') : " % (example))
+        url = url.strip().lower()
         # Catch 'q'uit request
-        if( html == 'q' ):
-            log.debug("Break '%s'" % (html))
+        if( url == 'q' ):
+            log.debug("Break '%s'" % (url))
             return
 
         # Make sure URL exists
         else:
-            if( Utils.checkURL(html) ):
-                log.debug("Valid URL '%s'" % (html))
+            if( Utils.checkURL(url) ):
+                log.debug("Valid URL '%s'" % (url))
                 break
             else:
-                log.warning("URL does not exist!  '%s'" % (html))
-                if( not html.startswith('http://') ):
+                log.warning("URL does not exist!  '%s'" % (url))
+                if( not url.startswith('http://') ):
                     log.warning(" - Maybe something starting with 'http://'??")
 
 
@@ -321,7 +368,7 @@ def _inter_add(sources, log):
     subt = subt.strip()
 
     # Add New Source
-    sources.add(html, title=titl, subtitle=subt)
+    sources.add(url, title=titl, subtitle=subt)
 
     return
 
@@ -381,6 +428,50 @@ def _getLogger(log, sets):
     log = MyLogger.defaultLogger(log, filename=filename, verbose=verbose, debug=debug)
     return log
 # } _getLogger()
+
+
+'''
+def _convertKeys(fname, oldKeys, newKeys):
+    """
+    """
+
+    import shutil, filecmp
+
+    print "Attempting to convert keys in '%s'" % (fname)
+    print "\tFrom: '%s'" % (str(oldKeys))
+    print "\tTo  : '%s'" % (str(newKeys))
+
+    # Create backup
+    pth, oldName = os.path.split(fname)
+    newName = ".back_" + oldName
+    newName = os.path.join(pth, newName)
+    print "Creating backup file:"
+    print "\t'%s' ==> '%s'" % (fname, newName)
+
+    shutil.copy2(fname, newName)
+    if( not os.path.exists(newName) ): raise RuntimeError("File not Copied!")
+    else: print "Backup created."
+    if( not filecmp.cmp(fname, newName) ): raise RuntimeError("Files do not match!")
+    else: print "Backup matches."
+
+    # Convert file
+    loadFile = open(fname, 'r')
+    loadData = json.load(loadFile)
+
+    print loadData.keys()
+
+    saveData = { nkey : loadData[okey] for (nkey,okey) in zip(newKeys, oldKeys) }
+    print "LOADED: "
+    print loadData
+    print "\n"
+    print "SAVING: "
+    print saveData
+    print "\n"
+
+    return
+
+# } _convertKeys()
+'''
 
 
 
