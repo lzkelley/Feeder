@@ -257,27 +257,32 @@ class Sources(object):
     # } clean()
     '''
 
-    def add(self, url, title='', subtitle='', check=True):
+    def add(self, url, title=None, subtitle=None, check=True):
         """
         Add an entry to sources.
         """
         self.log.debug("add()")
 
-        if( check and not zio.checkURL(url) ):
-            self.log.warning("URL '%s' does not exist!" % (url))
-            return False
+        if( isinstance(url, str) ): url = [ url ]
+        if( title is None ): title = ['']*np.size(url)
+        if( subtitle is None ): subtitle = ['']*np.size(url)
 
-        self.sources_url.append(url)
-        self.sources_title.append(title)
-        self.sources_subtitle.append(subtitle)
-
-        if( not self._recount() ):
-            self.sources_url.pop()
-            self.sources_title.pop()
-            self.sources_subtitle.pop()
+        if( not self._same_size(url, title, subtitle) ):
+            self.log.error("values to add are not the same length!")
             return False
 
 
+        for uu, tt, ss in zip(url, title, subtitle):
+            if( check and not zio.checkURL(uu) ):
+                self.log.warning("URL '%s' does not exist!" % (uu))
+                return False
+
+            self.sources_url.append(uu)
+            self.sources_title.append(tt)
+            self.sources_subtitle.append(ss)
+
+
+        self._recount()
         self.saved = False
         return True
 
@@ -291,23 +296,25 @@ class Sources(object):
         self.log.debug("delete()")
 
         if( inter ):
+            print "Delete the following sources: "
+            self.list(index)
+            conf = zio.promptYesNo('Are you sure?')
+            if( not conf ): return False
 
-            conf = zio.promptYesNo('Are you sure ')
+        if( not np.iterable(index) ): index = [index]
 
-        return
+        for id in index:
+            self.sources_url.pop(id)
+            self.sources_title.pop(id)
+            self.sources_subtitle.pop(id)
+
+        self._recount()
+        self.saved = False
+
+        return True
 
     # } delete()
 
-
-    '''
-    def _del_url(self, url):
-        """
-        Remove an entry from the sources DataFrame using the url address.
-        """
-        self.data = self.data[self.data.xs(SRC.URL,axis=1) != url]
-        return
-    # } _del_url()
-    '''
 
     def src(self, index=None):
         import numbers
@@ -363,8 +370,6 @@ class Sources(object):
     # } _str_row()
 
 
-
-
     def _confirm_unsaved(self):
         if( hasattr(self, 'saved') ):
             if( not self.saved ):
@@ -372,22 +377,30 @@ class Sources(object):
 
         return True
 
+    # } _confirm_unsaved()
 
     def _recount(self):
 
         self.log.debug("_recount()")
         uselists = [ self.sources_url, self.sources_title, self.sources_subtitle ]
-        counts = [ len(onelist) for onelist in uselists ]
 
-        if( len(set(counts)) == 1 ): self.log.debug("All lists have length %d" % (counts[0]))
+        count = np.size(self.sources_url)
+        if( self._same_size(*uselists) ): self.log.debug("All lists have length %d" % (count))
         else:
-            self.log.error("Sources list lengths do not match '%s'!" % (str(counts)))
+            self.log.error("Sources list lengths do not match!")
             return False
 
-        self.count = counts[0]
+        self.count = count
         return True
 
     # } _recount()
+
+    
+    def _same_size(self, *arrs):
+        counts = [ np.size(ar) for ar in arrs ]
+        if( len(set(counts)) == 1 ): return True
+        return False
+
 
 
     def addAll(self):
