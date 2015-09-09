@@ -48,7 +48,6 @@ class Settings(object):
         self.dir_log = "./log/"
         self.dir_data = "./data/"
         
-        # self.file_src = self.dir_data + "sources.json"
         self.file_sources = self.dir_data + "sources.conf"
         
 
@@ -79,8 +78,8 @@ def getParser(sets):
                         help="print highly verbose output to log")
 
     parser.add_argument("-s", "--sources", 
-                        dest="SRC_FILE", default=sets.file_src,
-                        help="source file (json).")
+                        dest="SRC_FILE", default=sets.file_sources,
+                        help="sources file.")
 
     return parser
 
@@ -98,7 +97,7 @@ def getArgs(parser, sets):
 
     sets.verbose = args.verbose
     sets.debug = args.debug
-    sets.file_src = args.SRC_FILE
+    sets.file_sources = args.SRC_FILE
 
     return args, sets
 
