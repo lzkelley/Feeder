@@ -17,7 +17,7 @@ Functions
 """
 
 # import json, pandas
-import os
+import os, shutil
 from configobj import ConfigObj
 import MyLogger, Settings, Utils
 from enum import Enum
@@ -39,18 +39,6 @@ class SRC(object):
 # } class SRC_COL
 '''
 
-'''
-class KEYS_SAVE(object):
-    DATA = 'data'
-    VERS = 'version'
-    DTCR = 'datetime_created'
-    DTSV = 'datetime_saved'
-    SVLS = 'savefile_list'
-
-# } class KEYS_SAVE
-
-SOURCES_COLUMNS = [ SRC.URL, SRC.TIT, SRC.SUB ]
-'''
 
 class SOURCES_KEYS(object):
     VERS = 'version'
@@ -58,7 +46,6 @@ class SOURCES_KEYS(object):
     SOURCES_URL = 'sources_url'
     SOURCES_TITLE = 'sources_title'
     SOURCES_SUBTITLE = 'sources_subtitle'
-
 
 
 class Source(object):
@@ -73,23 +60,18 @@ class Source(object):
         return self.name
 
 
-# } class Source
 
 
 
 class Sources(object):
     """
 
-    Objects
-    -------
-        SCOL :
-
     Functions
     ---------
-        load :
-        save :
-        clean :
-        add  :
+        new  : Initialize a new (or clear existing) state.
+        load : Load sources list from the given filename.
+        save : Save ``Sources`` state to file.
+        add  : Add one or multiple entries to sources.
         delete :
         _del_url :
 
@@ -113,6 +95,7 @@ class Sources(object):
             retval = self.load(fname)
             if( retval ):
                 self.log.debug(" - Loaded  v%s" % (str(self.version)))
+                self.log.debug(" - Sources: %d" % (self.count))
                 loaded = True
             else:
                 errStr = "Load Failed!"
@@ -135,11 +118,20 @@ class Sources(object):
 
         return
 
-    # } __init__()
+
 
 
     def new(self, inter=True):
         """
+        Initialize a new (or clear existing) state.
+
+        Arguments
+        ---------
+            inter <bool> : interactive, if so prompt if unsaved changes exist.
+
+        Returns
+            retval <bool> : True if new state is created.
+
         """
         self.log.debug("new()")
 
@@ -155,26 +147,32 @@ class Sources(object):
         self.sources_title = []
         self.sources_subtitle = []
 
-        self.saved = True
+        self._saved = True
         self.count = 0
 
         return True
 
-    # } new()
+
 
 
     def load(self, fname, inter=True):
         """
+        Load sources list from the given filename.
+
+        Arguments
+        ---------
+            fname <str>  : filename to load from.
+            inter <bool> : interactive, if so, prompt if unsaved changes.
         """
 
         self.log.debug("load()")
 
+        # Confirm lose unsaved changes
         if( inter ):
             confirm = self._confirm_unsaved()
             if( not confirm ): return False
 
-        ## Try to load file and convert to DataFrame
-        #  -----------------------------------------
+        # Try to load file and extract elements
         try:
             self.log.debug("Loading from '%s'" % (fname))
             config = ConfigObj(fname)
@@ -187,24 +185,41 @@ class Sources(object):
             import sys
             self.log.error("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
             retval = False
+        # Add appropriate metadata on success
         else:
             retval = True
             self.savefile = fname
-            self.saved = True
+            self._saved = True
             self._recount()
+            
 
         return retval
 
-    # } load()
 
 
-    def save(self, fname=None):
+    def save(self, fname=None, inter=True):
         """
+        Save ``Sources`` state to file.
+
+        In interactive mode (``inter`` == 'True'), prompts user if overwriting existing savefile.
+        If overwriting, backup file is created.
+        
+        Arguments
+        ---------
+            fname <str>  : filename to save to
+            inter <bool> : interactive, if true, prompt for file overwrite
+
+        Returns
+        -------
+            retval <bool> : `True` on successful save, otherwise `False`.
+
         """
+
         self.log.debug("save()")
 
         retval = False
 
+        # Use preset save filename if it exists
         if( fname is None ):
             if( self.savefile is not None ): fname = self.savefile
             else:
@@ -212,9 +227,7 @@ class Sources(object):
                 return retval
 
 
-        zio.checkPath(fname)
-
-
+        # Setup data using ``ConfigObj``
         self.log.debug("Creating ``ConfigObj``")
         config = ConfigObj()
         config.filename = fname
@@ -224,42 +237,59 @@ class Sources(object):
         config[SOURCES_KEYS.SOURCES_TITLE] = self.sources_title
         config[SOURCES_KEYS.SOURCES_SUBTITLE] = self.sources_subtitle
 
+
+        # Make sure path exists, confirm overwrite in interactive mode
+        zio.checkPath(fname)
+        if( os.path.exists(fname) and inter ):
+            conf = zio.promptYesNo("Destination '%s' already exists, overwrite?" % (fname))
+            if( not conf ): return False
+
+            # Create backup filename
+            oldPath, oldName = os.path.split(fname)
+            backname = os.path.join(oldPath, ".backup_" + oldName)
+            # If backup already exists, delete
+            if( os.path.exists(backname) ):
+                self.log.info("Backup '%s' already exists.  Deleting." % (backname))
+                os.remove(backname)
+
+            # Move old file to backup
+            self.log.info("Moving '%s' ==> '%s'" % (fname, backname))
+            shutil.move(fname, backname)
+            # Look for problems
+            if( os.path.exists(fname) ):
+                self.log.error("Old file '%s' still exists!" % (fname))
+                return False
+
+            if( not os.path.exists(backname) ):
+                self.log.error("Backup '%s' does not exist!" % (backname))
+                self.log.error("Lets hope the save works...")
+
+
+        # Save data
         self.log.debug("Writing ``ConfigObj``")
         config.write()
 
-
+        # Make sure its saved
         if( os.path.exists(fname) ):
             retval = True
-
-            self.log.info("Saved to '%s'" % (fname))
+            self._recount()
+            self.log.info("Saved %d sources to '%s'" % (self.count, fname))
             self.savefile = fname
-            self.saved = True
+            self._saved = True
             if( not fname in self.savefile_list ):
                 self.savefile_list.append(fname)
 
+        else:
+            self.log.error("Save to '%s' failed!" % (fname))
+            return False
 
         return retval
 
-    # } save()
 
-
-    '''
-    def clean(self, log):
-        """
-        Perform cleaning operations on DataFrame.
-        """
-        log.debug("clean()")
-        # must convert to integer before reindexing! (not sure why...)
-        self.data.index = self.data.index.astype(int)
-        self.data = self.data.reindex(index=np.arange(len(self.data)))
-        return
-
-    # } clean()
-    '''
 
     def add(self, url, title=None, subtitle=None, check=True):
         """
-        Add an entry to sources.
+        Add one or multiple entries to sources.
         """
         self.log.debug("add()")
 
@@ -283,10 +313,9 @@ class Sources(object):
 
 
         self._recount()
-        self.saved = False
+        self._saved = False
         return True
 
-    # } add()
 
 
     def delete(self, index, inter=True):
@@ -309,11 +338,11 @@ class Sources(object):
             self.sources_subtitle.pop(id)
 
         self._recount()
-        self.saved = False
+        self._saved = False
 
         return True
 
-    # } delete()
+
 
 
     def src(self, index=None):
@@ -337,7 +366,7 @@ class Sources(object):
         subs = np.array(self.sources_subtitle)
 
         return ids, zip(urls[cut], tits[cut], subs[cut])
-    # } src()
+
 
 
     def list(self, index=None):
@@ -351,7 +380,8 @@ class Sources(object):
             print "\t",self._str_src(id, src)
 
         return
-    # } list()
+
+
 
     def _str_src(self, id, src):
         """
@@ -367,17 +397,15 @@ class Sources(object):
 
         return pstr
 
-    # } _str_row()
-
 
     def _confirm_unsaved(self):
-        if( hasattr(self, 'saved') ):
-            if( not self.saved ):
+        if( hasattr(self, '_saved') ):
+            if( not self._saved ):
                 return zio.promptYesNo('This will overwrite unsaved data, are you sure?')
 
         return True
 
-    # } _confirm_unsaved()
+
 
     def _recount(self):
 
@@ -393,9 +421,7 @@ class Sources(object):
         self.count = count
         return True
 
-    # } _recount()
 
-    
     def _same_size(self, *arrs):
         counts = [ np.size(ar) for ar in arrs ]
         if( len(set(counts)) == 1 ): return True
@@ -455,9 +481,6 @@ class Sources(object):
 
         return
 
-
-
-# } class Sources
 
 
 
@@ -677,49 +700,6 @@ def _getLogger(log=None, sets=None):
     return log
 # } _getLogger()
 
-
-'''
-def _convertKeys(fname, oldKeys, newKeys):
-    """
-    """
-
-    import shutil, filecmp
-
-    print "Attempting to convert keys in '%s'" % (fname)
-    print "\tFrom: '%s'" % (str(oldKeys))
-    print "\tTo  : '%s'" % (str(newKeys))
-
-    # Create backup
-    pth, oldName = os.path.split(fname)
-    newName = ".back_" + oldName
-    newName = os.path.join(pth, newName)
-    print "Creating backup file:"
-    print "\t'%s' ==> '%s'" % (fname, newName)
-
-    shutil.copy2(fname, newName)
-    if( not os.path.exists(newName) ): raise RuntimeError("File not Copied!")
-    else: print "Backup created."
-    if( not filecmp.cmp(fname, newName) ): raise RuntimeError("Files do not match!")
-    else: print "Backup matches."
-
-    # Convert file
-    loadFile = open(fname, 'r')
-    loadData = json.load(loadFile)
-
-    print loadData.keys()
-
-    saveData = { nkey : loadData[okey] for (nkey,okey) in zip(newKeys, oldKeys) }
-    print "LOADED: "
-    print loadData
-    print "\n"
-    print "SAVING: "
-    print saveData
-    print "\n"
-
-    return
-
-# } _convertKeys()
-'''
 
 
 
