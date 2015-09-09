@@ -72,8 +72,13 @@ class Sources(object):
         load : Load sources list from the given filename.
         save : Save ``Sources`` state to file.
         add  : Add one or multiple entries to sources.
-        delete :
-        _del_url :
+        delete : Remove one or multiple entries from sources.
+        _src : Retrieve one or multiple sources from list (default: return all).
+        list : List some or all sources to stdout.
+        _str_src : Create a string representation of a single source.
+        _confirm_unsaved : If there is unsaved data, Prompt user (via CLI) to confirm overwrite.
+        _recount : Count the current number of sources and assure all lists match in length.
+        _same_size : Check whether all of the given arrays or lists are the same size.
 
     """
 
@@ -290,37 +295,69 @@ class Sources(object):
     def add(self, url, title=None, subtitle=None, check=True):
         """
         Add one or multiple entries to sources.
+
+        If ``title`` and/or ``subtitle`` are provided, they must match length of ``url``.
+        
+        Arguments
+        ---------
+            url      <str>([N])  : URL of new entry/entries.
+            title    <str>([N])  : Titles of new entries.
+            subtitle <str>([N])  : Subtitles of new entries.
+            check    <bool>      : Check each URL for existence before adding.
+
+        Returns
+        -------
+            retval <bool> : success if all passed entries were added.
+
         """
         self.log.debug("add()")
 
+        # Make sure url(s) is(are) iterable
         if( isinstance(url, str) ): url = [ url ]
+        # If no title/subtitle are provided, set to empty strings
         if( title is None ): title = ['']*np.size(url)
         if( subtitle is None ): subtitle = ['']*np.size(url)
 
+        # Make sure all arrays are the same length
         if( not self._same_size(url, title, subtitle) ):
             self.log.error("values to add are not the same length!")
             return False
 
-
+        # Iterate over and add all new entries
+        retval = True
         for uu, tt, ss in zip(url, title, subtitle):
+            # Check that url exists, skip if not
             if( check and not zio.checkURL(uu) ):
-                self.log.warning("URL '%s' does not exist!" % (uu))
-                return False
+                self.log.warning("URL '%s' does not exist, skipping!" % (uu))
+                retval = False
+                continue
 
             self.sources_url.append(uu)
             self.sources_title.append(tt)
             self.sources_subtitle.append(ss)
 
 
+        # update metadata
         self._recount()
         self._saved = False
-        return True
+
+        return retval
 
 
 
     def delete(self, index, inter=True):
         """
-        Remove an entry from sources.
+        Remove one or multiple entries from sources.
+        
+        Arguments
+        ---------
+            index <int>([N]) : index or indices to delete.
+            inter <bool>     : interactive, if so, confirm delete.
+
+        Returns
+        -------
+            retval <bool> : ``True`` on successful deletion
+
         """
         self.log.debug("delete()")
 
@@ -332,10 +369,19 @@ class Sources(object):
 
         if( not np.iterable(index) ): index = [index]
 
-        for id in index:
-            self.sources_url.pop(id)
-            self.sources_title.pop(id)
-            self.sources_subtitle.pop(id)
+        # Iterate over IDs and delete
+        #     MUST REVERSE ITERATE so that index numbers are preserved for subsequent entries.
+        del_url = []
+        del_tit = []
+        del_sub = []
+        for id in reversed(index):
+            del_url.append(self.sources_url.pop(id))
+            del_tit.append(self.sources_title.pop(id))
+            del_sub.append(self.sources_subtitle.pop(id))
+
+        self.log.info("Deleted URLs:")
+        for url in del_url:
+            self.log.info(" - '%s'" % (url))
 
         self._recount()
         self._saved = False
@@ -345,14 +391,33 @@ class Sources(object):
 
 
 
-    def src(self, index=None):
+    def _src(self, index=None):
+        """
+        Retrieve one or multiple sources from list (default: return all).
+
+        Arguments
+        ---------
+            index <obj> : target index or indices to retrieve.
+
+        Returns
+        -------
+            ids  <int>([N])   : returned index numbers.
+            srcs <str>[(N),3] : sources, each is {url, title, subtitle}
+        
+        """
+        self.log.debug("_src()")
+
+        ## Convert index to a slicing object
         import numbers
+        # Single integer number
         if( isinstance(index, numbers.Integral) ): 
             cut = slice(index, index+1)
             ids = np.arange(index, index+1)
+        # List of numbers
         elif( np.iterable(index) ): 
             cut = index
             ids = index
+        # Otherwise, return all sources
         else:
             if( index is not None ):
                 self.log.error("Unrecognized `index` = '%s'!" % (str(index)))
@@ -361,21 +426,31 @@ class Sources(object):
             cut = slice(None)
             ids = np.arange(len(self.sources_url))
 
+        ## Convert to np.array and slice
         urls = np.array(self.sources_url)
         tits = np.array(self.sources_title)
         subs = np.array(self.sources_subtitle)
 
-        return ids, zip(urls[cut], tits[cut], subs[cut])
+        srcs = zip(urls[cut], tits[cut], subs[cut])
+
+        return ids, srcs
 
 
 
     def list(self, index=None):
         """
-        List all sources in DataFrame.
+        List some or all sources to stdout.
+
+        Arguments
+        ---------
+            index <obj> : int, list of ints, or `None` for all entries.
+
         """
         self.log.debug("list()")
 
-        ids, srcs = self.src(index=index)
+        # Get entries and ID numbers
+        ids, srcs = self._src(index=index)
+        # Print each source
         for id,src in zip(ids, srcs):
             print "\t",self._str_src(id, src)
 
@@ -385,6 +460,17 @@ class Sources(object):
 
     def _str_src(self, id, src):
         """
+        Create a string representation of a single source.
+
+        Arguments
+        ---------
+            id <int>     : index number
+            src <str>[3] : source {url, title, subtitle}
+
+        Returns
+        -------
+            pstr <str> : formatted string representing source.
+
         """
 
         url,tit,sub = src
@@ -399,6 +485,14 @@ class Sources(object):
 
 
     def _confirm_unsaved(self):
+        """
+        If there is unsaved data, Prompt user (via CLI) to confirm overwrite.
+        
+        Returns
+        -------
+            retval <bool> : `True` on positive confirmation.
+
+        """
         if( hasattr(self, '_saved') ):
             if( not self._saved ):
                 return zio.promptYesNo('This will overwrite unsaved data, are you sure?')
@@ -408,6 +502,16 @@ class Sources(object):
 
 
     def _recount(self):
+        """
+        Count the current number of sources and assure all lists match in length.
+
+        Updated count is stored to `self.count`.
+
+        Returns
+        -------
+            retval <bool> : `True` if all lengths match.
+
+        """
 
         self.log.debug("_recount()")
         uselists = [ self.sources_url, self.sources_title, self.sources_subtitle ]
@@ -423,6 +527,18 @@ class Sources(object):
 
 
     def _same_size(self, *arrs):
+        """
+        Check whether all of the given arrays or lists are the same size.
+
+        Arguments
+        ---------
+            arrs <obj> : any number of comparison arrays.
+
+        Returns
+        -------
+            retval <bool> : `True` if all are same length
+
+        """
         counts = [ np.size(ar) for ar in arrs ]
         if( len(set(counts)) == 1 ): return True
         return False
