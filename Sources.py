@@ -54,7 +54,7 @@ class SOURCES_KEYS(object):
 
 class Source(object):
 
-    def __init__(self, url, title, subtitle=""):
+    def __init__(self, url, title, subtitle):
         self.url = url
         self.title = title
         self.subtitle = subtitle
@@ -77,7 +77,7 @@ class Sources(object):
         save : Save ``Sources`` state to file.
         add  : Add one or multiple entries to sources.
         delete : Remove one or multiple entries from sources.
-        _src : Retrieve one or multiple sources from list (default: return all).
+        _get : Retrieve one or multiple sources from list (default: return all).
         list : List some or all sources to stdout.
         _str_src : Create a string representation of a single source.
         _confirm_unsaved : If there is unsaved data, Prompt user (via CLI) to confirm overwrite.
@@ -148,16 +148,19 @@ class Sources(object):
             confirm = self._confirm_unsaved()
             if( not confirm ): return False
 
+        # Metadata
         self.version = __version__
         self.savefile_list = []
         self.savefile = None
+        self._saved = True
+        self.count = 0
 
+        # Sources data
         self.sources_url = []
         self.sources_title = []
         self.sources_subtitle = []
+        self._sources = []
 
-        self._saved = True
-        self.count = 0
 
         return True
 
@@ -176,6 +179,9 @@ class Sources(object):
 
         self.log.debug("load()")
 
+        ## Load raw Data
+        #  -------------
+
         # Confirm lose unsaved changes
         if( inter ):
             confirm = self._confirm_unsaved()
@@ -190,6 +196,12 @@ class Sources(object):
             self.sources_url = config[SOURCES_KEYS.SOURCES_URL]
             self.sources_title = config[SOURCES_KEYS.SOURCES_TITLE]
             self.sources_subtitle = config[SOURCES_KEYS.SOURCES_SUBTITLE]
+
+            self._sources = []
+            data = zip(self.sources_url, self.sources_title, self.sources_subtitle)
+            for ii, (url, tit, sub) in enumerate(data):
+                self._sources.append(Source(url, tit, sub))
+
         except:
             import sys
             self.log.error("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
@@ -339,7 +351,8 @@ class Sources(object):
             self.sources_url.append(uu)
             self.sources_title.append(tt)
             self.sources_subtitle.append(ss)
-
+            self._sources.append( Source(uu, tt, ss) )
+            
 
         # update metadata
         self._recount()
@@ -378,10 +391,12 @@ class Sources(object):
         del_url = []
         del_tit = []
         del_sub = []
+        del_src = []
         for id in reversed(index):
             del_url.append(self.sources_url.pop(id))
             del_tit.append(self.sources_title.pop(id))
             del_sub.append(self.sources_subtitle.pop(id))
+            del_src.append(self._sources.pop(id))
 
         self.log.info("Deleted URLs:")
         for url in del_url:
@@ -393,9 +408,7 @@ class Sources(object):
         return True
 
 
-
-
-    def _src(self, index=None):
+    def _get(self, index=None):
         """
         Retrieve one or multiple sources from list (default: return all).
 
@@ -409,33 +422,27 @@ class Sources(object):
             srcs <str>[(N),3] : sources, each is {url, title, subtitle}
         
         """
-        self.log.debug("_src()")
+        self.log.debug("_get()")
 
         ## Convert index to a slicing object
         import numbers
         # Single integer number
         if( isinstance(index, numbers.Integral) ): 
-            cut = slice(index, index+1)
             ids = np.arange(index, index+1)
         # List of numbers
         elif( np.iterable(index) ): 
-            cut = index
-            ids = index
+            ids = np.array(index)
         # Otherwise, return all sources
         else:
             if( index is not None ):
                 self.log.error("Unrecognized `index` = '%s'!" % (str(index)))
                 self.log.warning("Returning all entries")
 
-            cut = slice(None)
             ids = np.arange(len(self.sources_url))
 
-        ## Convert to np.array and slice
-        urls = np.array(self.sources_url)
-        tits = np.array(self.sources_title)
-        subs = np.array(self.sources_subtitle)
 
-        srcs = zip(urls[cut], tits[cut], subs[cut])
+        ## Select target elements and return
+        srcs = [ self._sources[ii] for ii in ids ]
 
         return ids, srcs
 
@@ -453,7 +460,7 @@ class Sources(object):
         self.log.debug("list()")
 
         # Get entries and ID numbers
-        ids, srcs = self._src(index=index)
+        ids, srcs = self._get(index=index)
         # Print each source
         for id,src in zip(ids, srcs):
             print "\t",self._str_src(id, src)
@@ -477,7 +484,9 @@ class Sources(object):
 
         """
 
-        url,tit,sub = src
+        url = src.url
+        tit = src.title
+        sub = src.subtitle
 
         tstr = tit
         if( len(sub) > 0 ): tstr += " - " + sub
@@ -518,7 +527,7 @@ class Sources(object):
         """
 
         self.log.debug("_recount()")
-        uselists = [ self.sources_url, self.sources_title, self.sources_subtitle ]
+        uselists = [ self.sources_url, self.sources_title, self.sources_subtitle, self._sources ]
 
         count = np.size(self.sources_url)
         if( self._same_size(*uselists) ): self.log.debug("All lists have length %d" % (count))
