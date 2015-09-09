@@ -10,15 +10,12 @@ Objects
 
 Functions
 ---------
-    main :
-    _interactive :
-    _inter_add : Interactively add a new ``Sources`` entry.
-    _inter_del : Interactively delete a ``Sources`` entry.
-    _inter_list : List all ``Sources`` entries.
-    _inter_find :
-    _inter_save :
-    _inter_help : 
-    _getLogger :
+    main         : Run interactive mode where the user passes options via CLI.
+    _inter_add   : Interactively add a new ``Sources`` entry.
+    _inter_del   : Interactively delete a ``Sources`` entry.
+    _inter_find  : 
+    _inter_save  : Save current sources list to file.
+    _getLogger   : Get a standard ``logging.Logger`` object for ``Sources.py``.
 
 
 """
@@ -33,7 +30,7 @@ import numpy as np
 
 import zcode.InOut as zio
 
-__version__ = 0.1
+__version__ = 0.2
 
 '''
 class SRC(object):
@@ -253,7 +250,7 @@ class Sources(object):
         # Make sure path exists, confirm overwrite in interactive mode
         zio.checkPath(fname)
         if( os.path.exists(fname) and inter ):
-            conf = zio.promptYesNo("Destination '%s' already exists, overwrite?" % (fname))
+            conf = zio.promptYesNo("\tDestination '%s' already exists, overwrite?" % (fname))
             if( not conf ): return False
 
             # Create backup filename
@@ -552,73 +549,26 @@ class Sources(object):
 
 
 
-    def addAll(self):
-        srclist = [
-            ["http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
-             "NewYork Times",
-             "HomePage"],
-            ["http://www.npr.org/rss/rss.php?id=1001",
-             "NPR",
-             "News"],
-            ["http://feeds.washingtonpost.com/rss/world",
-             "Washingtong Post",
-             "World"],
-            ["http://rss.cnn.com/rss/cnn_topstories.rss",
-             "CNN",
-             "Top Stories"],
-            ["http://hosted2.ap.org/atom/APDEFAULT/3d281c11a96b4ad082fe88aa0db04305",
-             "Associated Press",
-             "Top Headlines"],
-            ["http://rssfeeds.usatoday.com/usatoday-NewsTopStories",
-             "USA Today",
-             "News Top Stories"],
-            ["http://feeds.reuters.com/reuters/topNews",
-             "Reuters",
-             "Top News"],
-            ["http://feeds.bbci.co.uk/news/rss.xml",
-             "BBC News",
-             "Top News"],
-            ["http://feeds.foxnews.com/foxnews/latest",
-             "Fox News",
-             "Latest News"],
-            ["http://www.forbes.com/real-time/feed2/",
-             "Forbes",
-             "Latest Headlines"],
-            ["http://feeds.foxnews.com/foxnews/latest",
-             "Fox News",
-             "Latest News"],
-            ["http://www.ft.com/rss/home/us",
-             "Financial Times",
-             "US Home"],
-            ["http://feeds.abcnews.com/abcnews/topstories",
-             "ABC News",
-             "Top Stores"],
-            ["http://www.theguardian.com/uk/rss",
-             "The Guardian",
-             "UK Home"]
-            ]
 
-        for src in srclist:
-            print "Adding ", src[0]
-            self.add( src[0], src[1], src[2], check=False )
-
-        return
-
-
-
-
-
-
-
-def main(sets=None, log=None):
+def main():
     """
+    Run interactive mode where the user passes options via CLI to interact with ``Sources``.
+
+    Interactive options:
+        [q]uit   : exit interactive mode
+        [a]dd    : add a new sources entry
+        [d]elete : delete an existing sources entry
+        [l]ist   : list all current sources
+        [f]ind   : find/search for a particular source
+        [s]ave   : save the current sources to file
+        [h]elp   : This help information
 
     """
 
     ## Initialization
     #  --------------
-    if( sets is None ): sets = Settings.Settings()
-    log = _getLogger(log, sets)
+    sets = Settings.Settings()
+    log = _getLogger(sets=sets)
     log.info("main()")
     log.debug("version = '%s'" % str(__version__))
     log.debug("Settings version = '%s'" % (str(sets.version)))
@@ -635,22 +585,6 @@ def main(sets=None, log=None):
 
     ## Interactive Routine
     #  -------------------
-    _interactive(sources, log, sets)
-
-
-    log.info("Done.")
-
-    return
-
-# } main()
-
-
-def _interactive(sources, log, sets):
-    """
-
-    """
-    log.info("_interactive()")
-
     prompt = "\n\tAction?  [q]uit, [a]dd, [d]elete, [l]ist, [f]ind, [s]ave, [h]elp : "
     while( True ):
         arg = raw_input(prompt)
@@ -664,21 +598,23 @@ def _interactive(sources, log, sets):
         elif( arg.startswith('d') ):
             _inter_del(sources, log)
         elif( arg.startswith('l') ):
-            _inter_list(sources, log)
+            sources.list()
         elif( arg.startswith('f') ):
             _inter_find(sources, log)
         elif( arg.startswith('s') ):
-            _inter_save(sources, log)
+            _inter_save(sources, sets, log)
         elif( arg.startswith('h') ):
-            _inter_help(sources, log)
+            print '\n', main.__doc__
         else:
             log.warning("Argument '%s' not understood!" % (arg))
             continue
 
 
-    return sources, sets
+    log.debug("Done.\n")
 
-# } _interactive()
+    return
+
+# } main()
 
 
 
@@ -751,17 +687,6 @@ def _inter_del(sources, log):
 # } _inter_del()
 
 
-def _inter_list(sources, log):
-    """
-    List all ``Sources`` entries.
-    """
-    log.debug("_inter_list()")
-    sources.list()
-    return
-
-# } _inter_list()
-
-
 def _inter_find(sources, log):
     log.debug("_inter_find()")
 
@@ -770,60 +695,30 @@ def _inter_find(sources, log):
 # } _inter_find()
 
 
-def _inter_save(sources, log):
+def _inter_save(sources, sets, log):
     """
+    Save current sources list to file.
     """
     log.debug("_inter_save()")
 
-    FILE_TYPE = '.json'
+    log.info("Settings filename: '%s'" % (sets.file_sources))
+    log.info("``sources.savefile``: '%s'" % (sources.savefile))
 
-    saveName = None
-    if( sources.savefile is not None ):
-        arg = raw_input("\tSave to loaded filename '%s' ? y/[n] : " % (sources.savefile))
-        arg = arg.strip().lower()
-        if( arg.startswith('q') ):
-            log.debug("arg '%s', canceling save" % (arg))
-            return
-        elif( arg.startswith('y') ):
-            saveName = sources.savefile
+    # Set default save filename
+    savename = sources.savefile
+    if( savename is None ): savename = sets.file_sources
 
+    # Prompt for filename
+    args = raw_input("\tEnter save filename [default '%s'] : " % (savename)).strip()
+    if( len(args) > 0 ): savename = args
 
-    while( saveName is None ):
-        saveName = raw_input("\tEnter (json) save filename : ").strip()
-        if( saveName.lower() == 'q' ):
-            log.debug("saveName '%s', canceling save" % (saveName))
-            return
-        elif( not saveName.lower().endswith(FILE_TYPE) ):
-            saveName += FILE_TYPE
-
-        if( os.path.exists(saveName) ):
-            arg = raw_input("\tFile '%s' already exists, overwrite? y/[n] : ")
-            arg = arg.strip().lower()
-            if( arg.startswith('q') ):
-                log.debug("arg '%s', canceling save" % (arg))
-                return
-            elif( arg.startswith('y') ):
-                break
-            else:
-                saveName = None
-
-
-    print "SAVENAME = ", saveName
-
+    retval = sources.save(fname=savename, inter=True)
+    if( retval ): log.info("Saved to '%s'" % (savename))
+    else: log.error("Could not save to '%s'!" % (savename))
 
     return
 
 # } _inter_save()
-
-
-
-def _inter_help(sources, log):
-    log.debug("_inter_help()")
-
-    return
-
-# } _inter_help()
-
 
 
 
@@ -841,8 +736,6 @@ def _getLogger(log=None, sets=None):
     log = MyLogger.defaultLogger(log, filename=filename, verbose=verbose, debug=debug)
     return log
 # } _getLogger()
-
-
 
 
 
