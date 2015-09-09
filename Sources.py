@@ -11,6 +11,13 @@ Objects
 Functions
 ---------
     main :
+    _interactive :
+    _inter_add : Interactively add a new ``Sources`` entry.
+    _inter_del : Interactively delete a ``Sources`` entry.
+    _inter_list : List all ``Sources`` entries.
+    _inter_find :
+    _inter_save :
+    _inter_help : 
     _getLogger :
 
 
@@ -610,7 +617,7 @@ def main(sets=None, log=None):
 
     ## Initialization
     #  --------------
-    sets = Settings.getSettings(sets)
+    if( sets is None ): sets = Settings.Settings()
     log = _getLogger(log, sets)
     log.info("main()")
     log.debug("version = '%s'" % str(__version__))
@@ -644,7 +651,7 @@ def _interactive(sources, log, sets):
     """
     log.info("_interactive()")
 
-    prompt = "\tAction?  [q]uit, [a]dd, [d]elete, [l]ist, [f]ind, [s]ave, [h]elp : "
+    prompt = "\n\tAction?  [q]uit, [a]dd, [d]elete, [l]ist, [f]ind, [s]ave, [h]elp : "
     while( True ):
         arg = raw_input(prompt)
         arg = arg.strip().lower()
@@ -677,9 +684,16 @@ def _interactive(sources, log, sets):
 
 def _inter_add(sources, log):
     """
-    Add a new ``Sources`` entry.
-    """
+    Interactively add a new ``Sources`` entry.
 
+    Prompts user for {url, title, subtitle}.
+
+    Arguments
+    ---------
+        sources <obj> : ``Sources`` object instance
+        log     <obj> : ``logging.Logger`` instance
+
+    """
     log.debug("_inter_add()")
 
     # URL
@@ -692,17 +706,6 @@ def _inter_add(sources, log):
             log.debug("Break '%s'" % (url))
             return
 
-        # Make sure URL exists
-        else:
-            if( Utils.checkURL(url) ):
-                log.debug("Valid URL '%s'" % (url))
-                break
-            else:
-                log.warning("URL does not exist!  '%s'" % (url))
-                if( not url.startswith('http://') ):
-                    log.warning(" - Maybe something starting with 'http://'??")
-
-
     # Title
     titl = raw_input("\tTitle (e.g. 'NewYork Times'): ")
     titl = titl.strip()
@@ -712,7 +715,9 @@ def _inter_add(sources, log):
     subt = subt.strip()
 
     # Add New Source
-    sources.add(url, title=titl, subtitle=subt)
+    retval = sources.add(url, title=titl, subtitle=subt, check=True)
+    if( retval ): log.info("Added entry for '%s'" % (url))
+    else: log.error("Could not add entry for '%s'!" % (url))
 
     return
 
@@ -720,7 +725,26 @@ def _inter_add(sources, log):
 
 
 def _inter_del(sources, log):
+    """
+    Interactively delete a ``Sources`` entry.
+    """
+    import numbers
     log.debug("_inter_del()")
+
+    index = raw_input("\tIndex number: ").strip().lower()
+    if( index.startswith('q') ):
+        log.debug("Break")
+        return
+
+    try:
+        index = np.int(index)
+    except:
+        log.error("Could not convert '%s' to integer" % (index))
+        return
+
+    retval = sources.delete(index, inter=True)
+    if( retval ): log.info("Deleted entry '%d'" % (index))
+    else: log.error("Could not delete entry '%d'!" % (index))
 
     return
 
@@ -728,9 +752,11 @@ def _inter_del(sources, log):
 
 
 def _inter_list(sources, log):
+    """
+    List all ``Sources`` entries.
+    """
     log.debug("_inter_list()")
-    sources.list(log)
-
+    sources.list()
     return
 
 # } _inter_list()
