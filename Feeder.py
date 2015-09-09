@@ -10,10 +10,31 @@ import numpy as np
 
 
 def main():
+    """
+
+    """
     
     beg = datetime.now()
 
-    sources = Sources.sources
+    ## Initialization
+    #  --------------
+    sets = Settings.Settings()
+    log = _getLogger(sets=sets)
+    log.info("Feeder.py")
+    log.debug("main()")
+    log.debug("version = '%s'" % str(__version__))
+    log.debug("Settings version = '%s'" % (str(sets.version)))
+
+    # Command-Line Arguments
+    log.debug("Getting command line arguments")
+    parser = Settings.getParser(sets)
+    args, sets = Settings.getArgs(parser, sets)
+
+    # Load Sources
+    log.info("Loading Sources")
+    sources = Sources(log=log, sets=sets)
+
+
     names, feeds = loadSources(sources)
 
     numFeeds = 0
