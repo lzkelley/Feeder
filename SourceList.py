@@ -3,7 +3,6 @@
 Objects
 -------
     SOURCELIST_KEYS
-    Source
     SourceList
     
 
@@ -21,12 +20,13 @@ Functions
 # import json, pandas
 import os, shutil
 from configobj import ConfigObj
-import MyLogger, Settings
 from enum import Enum
 from datetime import datetime
 import numpy as np
 
 import zcode.InOut as zio
+
+import MyLogger, Settings, Source
 
 __version__ = 0.1
 
@@ -39,19 +39,6 @@ class SOURCELIST_KEYS(object):
     SOURCES_URL = 'sources_url'
     SOURCES_TITLE = 'sources_title'
     SOURCES_SUBTITLE = 'sources_subtitle'
-
-
-class Source(object):
-
-    def __init__(self, url, title, subtitle):
-        self.url = url.lower()
-        self.title = title
-        self.subtitle = subtitle
-        self.name = self.title + " " + self.subtitle
-
-    def __str__(self):
-        return self.name
-
 
 
 
@@ -189,7 +176,7 @@ class SourceList(object):
             self.sources = []
             data = zip(self._sources_url, self._sources_title, self._sources_subtitle)
             for ii, (url, tit, sub) in enumerate(data):
-                self.sources.append(Source(url, tit, sub))
+                self.sources.append(Source.Source(url, tit, sub))
 
         except:
             import sys
@@ -456,6 +443,17 @@ class SourceList(object):
 
         return
 
+
+
+    def getFeeds(self):
+        """
+        """
+        self._log.debug("getFeeds()")
+        numValid = 0
+        for src in self.sources:
+            if( src.getFeed() ): numValid += 1
+
+        return
 
 
     def _str_src(self, id, src):
