@@ -3,10 +3,14 @@
 """
 
 
-import Sources
-import rss
 from datetime import datetime
 import numpy as np
+
+import Settings, Sources, rss, MyLogger
+
+
+__version__ = 0.1
+_LOG_FILENAME = "Feeder.log"
 
 
 def main():
@@ -19,7 +23,7 @@ def main():
     ## Initialization
     #  --------------
     sets = Settings.Settings()
-    log = _getLogger(sets=sets)
+    log = MyLogger.defaultLogger(_LOG_FILENAME, sets=sets)
     log.info("Feeder.py")
     log.debug("main()")
     log.debug("version = '%s'" % str(__version__))
@@ -31,11 +35,10 @@ def main():
     args, sets = Settings.getArgs(parser, sets)
 
     # Load Sources
+    log.info("Initializing Sources")
+    sources = Sources.Sources(log=log, sets=sets)
     log.info("Loading Sources")
-    sources = Sources(log=log, sets=sets)
-
-
-    names, feeds = loadSources(sources)
+    names, feeds = loadSources(sources, log)
 
     numFeeds = 0
     numStories = 0
@@ -52,27 +55,29 @@ def main():
 
         print ""
 
-
-    
         
     print "Feeds: %d" % (numFeeds)
     print "Stores: %d" % (numStories)
 
     end = datetime.now()
-    print "After %s" % (str(end-beg))
+    log.info("Done After %s\n" % (str(end-beg)))
 
-    
     return
 
 # } main()
 
 
-def loadSources(sources):
+def loadSources(sources, log):
+    """
+    """
+    log.debug("loadSources()")
+
     names = []
     feeds  = []
-    for src in sources:
+    log.debug(" - Loading feeds for %d sources" % (sources.count))
+    for src in sources.sources:
         names.append(str(src))
-        feeds.append(rss.entries(src.html))
+        feeds.append(rss.entries(src.url))
 
     return names, feeds
 

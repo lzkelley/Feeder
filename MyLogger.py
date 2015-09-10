@@ -14,7 +14,12 @@ Functions
 
 import logging, inspect, os
 import numpy as np
-import Utils
+
+import zcode.InOut as zio
+
+import Settings
+
+
 
 class IndentFormatter(logging.Formatter):
     """
@@ -81,7 +86,7 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
     ## Log to file
     #  -----------
     if( tofile is not None ):
-        Utils.checkPath(tofile)
+        zio.checkPath(tofile)
 
         # Create default formatting for file output
         if( fileFmt is None ):
@@ -114,36 +119,34 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
 
 
 
-def defaultLogger(logger=None, filename=None, verbose=False, debug=False):
+def defaultLogger(fname, log=None, sets=None):
     """
     Create a basic ``logging.Logger`` object, logging to stream and file.
     
     Arguments
     ---------
-        logger  <obj>  : a ``logging`` level (integer), or `None` for default
+        log  <obj>  : a ``logging`` level (integer), or `None` for default
         verbose <bool> : True to set 'verbose' output (`logging.INFO`)
         debug   <bool> : True to set 'debug'   output (`logging.DEBUG`), overrides ``verbose``
 
     Returns
     -------
-        logger  <obj>  : ``logging.Logger`` object.
+        log  <obj>  : ``logging.Logger`` object.
 
     """
 
-    if( isinstance(logger, logging.Logger) ): return logger
+    if( isinstance(log, logging.Logger) ): return log
+    if( sets is None ): sets = Settings.Settings()
 
-    import numbers
+    filename = sets.dir_log + fname
 
-    if( isinstance(logger, numbers.Integral) ):
-        level = logger
-    else:
-        if(   debug   ): level = logging.DEBUG
-        elif( verbose ): level = logging.INFO
-        else:            level = logging.WARNING
+    if(   sets.debug   ): level = logging.DEBUG
+    elif( sets.verbose ): level = logging.INFO
+    else:                 level = logging.WARNING
 
-    logger = _getLogger(None, tostr=True, tofile=filename, strLevel=level, fileLevel=logging.DEBUG)
+    log = _getLogger(None, tostr=True, tofile=filename, strLevel=level, fileLevel=logging.DEBUG)
 
-    return logger
+    return log
 
 # defaultLogger()
 

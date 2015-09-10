@@ -2,11 +2,10 @@
 
 Objects
 -------
-    SRC
-    KEYS_SAVE
+    SOURCES_KEYS
     Source
     Sources
-
+    
 
 Functions
 ---------
@@ -15,7 +14,6 @@ Functions
     _inter_del   : Interactively delete a ``Sources`` entry.
     _inter_find  : 
     _inter_save  : Save current sources list to file.
-    _getLogger   : Get a standard ``logging.Logger`` object for ``Sources.py``.
 
 
 """
@@ -23,25 +21,16 @@ Functions
 # import json, pandas
 import os, shutil
 from configobj import ConfigObj
-import MyLogger, Settings, Utils
+import MyLogger, Settings
 from enum import Enum
 from datetime import datetime
 import numpy as np
 
 import zcode.InOut as zio
 
-__version__ = 0.2
+__version__ = 0.1
 
-'''
-class SRC(object):
-    """
-    Column keys for Sources `DataFrame`.
-    """
-    URL = 'url'
-    TIT = 'title'
-    SUB = 'subtitle'
-# } class SRC_COL
-'''
+_LOG_FILENAME = 'Sources.log'
 
 
 class SOURCES_KEYS(object):
@@ -92,7 +81,7 @@ class Sources(object):
         """
         # Load settings (singleton)
         if( sets is None ): sets = Settings.Settings()
-        self.log = _getLogger(log, sets)
+        self.log = MyLogger.defaultLogger(_LOG_FILENAME, log, sets)
         # Set default filename
         if( fname is None ): fname = sets.file_sources
 
@@ -159,7 +148,7 @@ class Sources(object):
         self.sources_url = []
         self.sources_title = []
         self.sources_subtitle = []
-        self._sources = []
+        self.sources = []
 
 
         return True
@@ -197,10 +186,10 @@ class Sources(object):
             self.sources_title = config[SOURCES_KEYS.SOURCES_TITLE]
             self.sources_subtitle = config[SOURCES_KEYS.SOURCES_SUBTITLE]
 
-            self._sources = []
+            self.sources = []
             data = zip(self.sources_url, self.sources_title, self.sources_subtitle)
             for ii, (url, tit, sub) in enumerate(data):
-                self._sources.append(Source(url, tit, sub))
+                self.sources.append(Source(url, tit, sub))
 
         except:
             import sys
@@ -351,7 +340,7 @@ class Sources(object):
             self.sources_url.append(uu)
             self.sources_title.append(tt)
             self.sources_subtitle.append(ss)
-            self._sources.append( Source(uu, tt, ss) )
+            self.sources.append( Source(uu, tt, ss) )
             
 
         # update metadata
@@ -396,7 +385,7 @@ class Sources(object):
             del_url.append(self.sources_url.pop(id))
             del_tit.append(self.sources_title.pop(id))
             del_sub.append(self.sources_subtitle.pop(id))
-            del_src.append(self._sources.pop(id))
+            del_src.append(self.sources.pop(id))
 
         self.log.info("Deleted URLs:")
         for url in del_url:
@@ -442,7 +431,7 @@ class Sources(object):
 
 
         ## Select target elements and return
-        srcs = [ self._sources[ii] for ii in ids ]
+        srcs = [ self.sources[ii] for ii in ids ]
 
         return ids, srcs
 
@@ -527,7 +516,7 @@ class Sources(object):
         """
 
         self.log.debug("_recount()")
-        uselists = [ self.sources_url, self.sources_title, self.sources_subtitle, self._sources ]
+        uselists = [ self.sources_url, self.sources_title, self.sources_subtitle, self.sources ]
 
         count = np.size(self.sources_url)
         if( self._same_size(*uselists) ): self.log.debug("All lists have length %d" % (count))
@@ -577,7 +566,7 @@ def main():
     ## Initialization
     #  --------------
     sets = Settings.Settings()
-    log = _getLogger(sets=sets)
+    log = MyLogger.defaultLogger(_LOG_FILENAME, sets=sets)
     log.info("main()")
     log.debug("version = '%s'" % str(__version__))
     log.debug("Settings version = '%s'" % (str(sets.version)))
@@ -728,23 +717,6 @@ def _inter_save(sources, sets, log):
     return
 
 # } _inter_save()
-
-
-
-def _getLogger(log=None, sets=None):
-    """
-    Get a standard ``logging.Logger`` object for ``Sources.py``.
-    """
-    if( sets is None ): sets = Settings.Settings()
-
-    useDir = sets.dir_log
-    verbose = sets.verbose
-    debug = sets.debug
-
-    filename = useDir + "Sources.log"
-    log = MyLogger.defaultLogger(log, filename=filename, verbose=verbose, debug=debug)
-    return log
-# } _getLogger()
 
 
 
