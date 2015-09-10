@@ -81,7 +81,7 @@ class SourceList(object):
         """
         # Load settings (singleton)
         if( sets is None ): sets = Settings.Settings()
-        self.log = MyLogger.defaultLogger(_LOG_FILENAME, log, sets)
+        self._log = MyLogger.defaultLogger(_LOG_FILENAME, log, sets)
         # Set default filename
         if( fname is None ): fname = sets.file_sourcelist
 
@@ -89,30 +89,30 @@ class SourceList(object):
 
         # Load data from save file
         if( os.path.exists(fname) ):
-            self.log.debug("Loading from '%s'" % (fname))
+            self._log.debug("Loading from '%s'" % (fname))
             retval = self.load(fname)
             if( retval ):
-                self.log.debug(" - Loaded  v%s" % (str(self.version)))
-                self.log.debug(" - Sources: %d" % (self.count))
+                self._log.debug(" - Loaded  v%s" % (str(self.version)))
+                self._log.debug(" - Sources: %d" % (self.count))
                 loaded = True
             else:
                 errStr = "Load Failed!"
-                self.log.error(errStr)
+                self._log.error(errStr)
                 raise RuntimeError(errStr)
         else:
-            self.log.warning("File '%s' does not exist!" % (fname))
+            self._log.warning("File '%s' does not exist!" % (fname))
 
 
         # Create new
         if( not loaded ):
 
             # initialize values
-            self.log.warning("Initializing new SourceList")
+            self._log.warning("Initializing new SourceList")
             self.new()
             # save
-            self.log.info("Saving")
+            self._log.info("Saving")
             retval = self.save(fname=fname)
-            if( not retval ): self.log.error("Error, not saved!!")
+            if( not retval ): self._log.error("Error, not saved!!")
 
         return
 
@@ -131,7 +131,7 @@ class SourceList(object):
             retval <bool> : True if new state is created.
 
         """
-        self.log.debug("new()")
+        self._log.debug("new()")
 
         if( inter ):
             confirm = self._confirm_unsaved()
@@ -139,15 +139,15 @@ class SourceList(object):
 
         # Metadata
         self.version = __version__
-        self.savefile_list = []
+        self._savefile_list = []
         self.savefile = None
         self._saved = True
         self.count = 0
 
         # SourceList data
-        self.sources_url = []
-        self.sources_title = []
-        self.sources_subtitle = []
+        self._sources_url = []
+        self._sources_title = []
+        self._sources_subtitle = []
         self.sources = []
 
 
@@ -166,7 +166,7 @@ class SourceList(object):
             inter <bool> : interactive, if so, prompt if unsaved changes.
         """
 
-        self.log.debug("load()")
+        self._log.debug("load()")
 
         ## Load raw Data
         #  -------------
@@ -178,22 +178,22 @@ class SourceList(object):
 
         # Try to load file and extract elements
         try:
-            self.log.debug("Loading from '%s'" % (fname))
+            self._log.debug("Loading from '%s'" % (fname))
             config = ConfigObj(fname)
             self.version = config[SOURCELIST_KEYS.VERS]
-            self.savefile_list = config[SOURCELIST_KEYS.SAVE_LIST]
-            self.sources_url = config[SOURCELIST_KEYS.SOURCES_URL]
-            self.sources_title = config[SOURCELIST_KEYS.SOURCES_TITLE]
-            self.sources_subtitle = config[SOURCELIST_KEYS.SOURCES_SUBTITLE]
+            self._savefile_list = config[SOURCELIST_KEYS.SAVE_LIST]
+            self._sources_url = config[SOURCELIST_KEYS.SOURCES_URL]
+            self._sources_title = config[SOURCELIST_KEYS.SOURCES_TITLE]
+            self._sources_subtitle = config[SOURCELIST_KEYS.SOURCES_SUBTITLE]
 
             self.sources = []
-            data = zip(self.sources_url, self.sources_title, self.sources_subtitle)
+            data = zip(self._sources_url, self._sources_title, self._sources_subtitle)
             for ii, (url, tit, sub) in enumerate(data):
                 self.sources.append(Source(url, tit, sub))
 
         except:
             import sys
-            self.log.error("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
+            self._log.error("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
             retval = False
         # Add appropriate metadata on success
         else:
@@ -225,7 +225,7 @@ class SourceList(object):
 
         """
 
-        self.log.debug("save()")
+        self._log.debug("save()")
 
         retval = False
 
@@ -233,19 +233,19 @@ class SourceList(object):
         if( fname is None ):
             if( self.savefile is not None ): fname = self.savefile
             else:
-                self.log.error("``savefile`` is not set, ``fname`` must be provided!")
+                self._log.error("``savefile`` is not set, ``fname`` must be provided!")
                 return retval
 
 
         # Setup data using ``ConfigObj``
-        self.log.debug("Creating ``ConfigObj``")
+        self._log.debug("Creating ``ConfigObj``")
         config = ConfigObj()
         config.filename = fname
         config[SOURCELIST_KEYS.VERS] = self.version
-        config[SOURCELIST_KEYS.SAVE_LIST] = self.savefile_list
-        config[SOURCELIST_KEYS.SOURCES_URL] = self.sources_url
-        config[SOURCELIST_KEYS.SOURCES_TITLE] = self.sources_title
-        config[SOURCELIST_KEYS.SOURCES_SUBTITLE] = self.sources_subtitle
+        config[SOURCELIST_KEYS.SAVE_LIST] = self._savefile_list
+        config[SOURCELIST_KEYS.SOURCES_URL] = self._sources_url
+        config[SOURCELIST_KEYS.SOURCES_TITLE] = self._sources_title
+        config[SOURCELIST_KEYS.SOURCES_SUBTITLE] = self._sources_subtitle
 
 
         # Make sure path exists, confirm overwrite in interactive mode
@@ -259,38 +259,38 @@ class SourceList(object):
             backname = os.path.join(oldPath, ".backup_" + oldName)
             # If backup already exists, delete
             if( os.path.exists(backname) ):
-                self.log.info("Backup '%s' already exists.  Deleting." % (backname))
+                self._log.info("Backup '%s' already exists.  Deleting." % (backname))
                 os.remove(backname)
 
             # Move old file to backup
-            self.log.info("Moving '%s' ==> '%s'" % (fname, backname))
+            self._log.info("Moving '%s' ==> '%s'" % (fname, backname))
             shutil.move(fname, backname)
             # Look for problems
             if( os.path.exists(fname) ):
-                self.log.error("Old file '%s' still exists!" % (fname))
+                self._log.error("Old file '%s' still exists!" % (fname))
                 return False
 
             if( not os.path.exists(backname) ):
-                self.log.error("Backup '%s' does not exist!" % (backname))
-                self.log.error("Lets hope the save works...")
+                self._log.error("Backup '%s' does not exist!" % (backname))
+                self._log.error("Lets hope the save works...")
 
 
         # Save data
-        self.log.debug("Writing ``ConfigObj``")
+        self._log.debug("Writing ``ConfigObj``")
         config.write()
 
         # Make sure its saved
         if( os.path.exists(fname) ):
             retval = True
             self._recount()
-            self.log.info("Saved %d sources to '%s'" % (self.count, fname))
+            self._log.info("Saved %d sources to '%s'" % (self.count, fname))
             self.savefile = fname
             self._saved = True
-            if( not fname in self.savefile_list ):
-                self.savefile_list.append(fname)
+            if( not fname in self._savefile_list ):
+                self._savefile_list.append(fname)
 
         else:
-            self.log.error("Save to '%s' failed!" % (fname))
+            self._log.error("Save to '%s' failed!" % (fname))
             return False
 
         return retval
@@ -315,7 +315,7 @@ class SourceList(object):
             retval <bool> : success if all passed entries were added.
 
         """
-        self.log.debug("add()")
+        self._log.debug("add()")
 
         # Make sure url(s) is(are) iterable
         if( isinstance(url, str) ): url = [ url ]
@@ -325,7 +325,7 @@ class SourceList(object):
 
         # Make sure all arrays are the same length
         if( not self._same_size(url, title, subtitle) ):
-            self.log.error("values to add are not the same length!")
+            self._log.error("values to add are not the same length!")
             return False
 
         # Iterate over and add all new entries
@@ -333,13 +333,13 @@ class SourceList(object):
         for uu, tt, ss in zip(url, title, subtitle):
             # Check that url exists, skip if not
             if( check and not zio.checkURL(uu) ):
-                self.log.warning("URL '%s' does not exist, skipping!" % (uu))
+                self._log.warning("URL '%s' does not exist, skipping!" % (uu))
                 retval = False
                 continue
 
-            self.sources_url.append(uu)
-            self.sources_title.append(tt)
-            self.sources_subtitle.append(ss)
+            self._sources_url.append(uu)
+            self._sources_title.append(tt)
+            self._sources_subtitle.append(ss)
             self.sources.append( Source(uu, tt, ss) )
             
 
@@ -365,7 +365,7 @@ class SourceList(object):
             retval <bool> : ``True`` on successful deletion
 
         """
-        self.log.debug("delete()")
+        self._log.debug("delete()")
 
         if( inter ):
             print "Delete the following sources: "
@@ -382,14 +382,14 @@ class SourceList(object):
         del_sub = []
         del_src = []
         for id in reversed(index):
-            del_url.append(self.sources_url.pop(id))
-            del_tit.append(self.sources_title.pop(id))
-            del_sub.append(self.sources_subtitle.pop(id))
+            del_url.append(self._sources_url.pop(id))
+            del_tit.append(self._sources_title.pop(id))
+            del_sub.append(self._sources_subtitle.pop(id))
             del_src.append(self.sources.pop(id))
 
-        self.log.info("Deleted URLs:")
+        self._log.info("Deleted URLs:")
         for url in del_url:
-            self.log.info(" - '%s'" % (url))
+            self._log.info(" - '%s'" % (url))
 
         self._recount()
         self._saved = False
@@ -411,7 +411,7 @@ class SourceList(object):
             srcs <str>[(N),3] : sources, each is {url, title, subtitle}
         
         """
-        self.log.debug("_get()")
+        self._log.debug("_get()")
 
         ## Convert index to a slicing object
         import numbers
@@ -424,10 +424,10 @@ class SourceList(object):
         # Otherwise, return all sources
         else:
             if( index is not None ):
-                self.log.error("Unrecognized `index` = '%s'!" % (str(index)))
-                self.log.warning("Returning all entries")
+                self._log.error("Unrecognized `index` = '%s'!" % (str(index)))
+                self._log.warning("Returning all entries")
 
-            ids = np.arange(len(self.sources_url))
+            ids = np.arange(len(self._sources_url))
 
 
         ## Select target elements and return
@@ -446,7 +446,7 @@ class SourceList(object):
             index <obj> : int, list of ints, or `None` for all entries.
 
         """
-        self.log.debug("list()")
+        self._log.debug("list()")
 
         # Get entries and ID numbers
         ids, srcs = self._get(index=index)
@@ -515,13 +515,13 @@ class SourceList(object):
 
         """
 
-        self.log.debug("_recount()")
-        uselists = [ self.sources_url, self.sources_title, self.sources_subtitle, self.sources ]
+        self._log.debug("_recount()")
+        uselists = [ self._sources_url, self._sources_title, self._sources_subtitle, self.sources ]
 
-        count = np.size(self.sources_url)
-        if( self._same_size(*uselists) ): self.log.debug("All lists have length %d" % (count))
+        count = np.size(self._sources_url)
+        if( self._same_size(*uselists) ): self._log.debug("All lists have length %d" % (count))
         else:
-            self.log.error("Sources list lengths do not match!")
+            self._log.error("Sources list lengths do not match!")
             return False
 
         self.count = count
