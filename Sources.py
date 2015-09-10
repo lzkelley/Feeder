@@ -2,18 +2,18 @@
 
 Objects
 -------
-    SOURCES_KEYS
+    SOURCELIST_KEYS
     Source
-    Sources
+    SourceList
     
 
 Functions
 ---------
     main         : Run interactive mode where the user passes options via CLI.
-    _inter_add   : Interactively add a new ``Sources`` entry.
-    _inter_del   : Interactively delete a ``Sources`` entry.
+    _inter_add   : Interactively add a new ``SourceList`` entry.
+    _inter_del   : Interactively delete a ``SourceList`` entry.
     _inter_find  : 
-    _inter_save  : Save current sources list to file.
+    _inter_save  : Save current ``SourceList`` to file.
 
 
 """
@@ -30,10 +30,10 @@ import zcode.InOut as zio
 
 __version__ = 0.1
 
-_LOG_FILENAME = 'Sources.log'
+_LOG_FILENAME = 'sources.log'
 
 
-class SOURCES_KEYS(object):
+class SOURCELIST_KEYS(object):
     VERS = 'version'
     SAVE_LIST = 'savefile_list'
     SOURCES_URL = 'sources_url'
@@ -44,7 +44,7 @@ class SOURCES_KEYS(object):
 class Source(object):
 
     def __init__(self, url, title, subtitle):
-        self.url = url
+        self.url = url.lower()
         self.title = title
         self.subtitle = subtitle
         self.name = self.title + " " + self.subtitle
@@ -56,14 +56,14 @@ class Source(object):
 
 
 
-class Sources(object):
+class SourceList(object):
     """
 
     Functions
     ---------
         new  : Initialize a new (or clear existing) state.
         load : Load sources list from the given filename.
-        save : Save ``Sources`` state to file.
+        save : Save ``SourceList`` state to file.
         add  : Add one or multiple entries to sources.
         delete : Remove one or multiple entries from sources.
         _get : Retrieve one or multiple sources from list (default: return all).
@@ -83,7 +83,7 @@ class Sources(object):
         if( sets is None ): sets = Settings.Settings()
         self.log = MyLogger.defaultLogger(_LOG_FILENAME, log, sets)
         # Set default filename
-        if( fname is None ): fname = sets.file_sources
+        if( fname is None ): fname = sets.file_sourcelist
 
         loaded = False
 
@@ -107,7 +107,7 @@ class Sources(object):
         if( not loaded ):
 
             # initialize values
-            self.log.warning("Initializing new Sources")
+            self.log.warning("Initializing new SourceList")
             self.new()
             # save
             self.log.info("Saving")
@@ -144,7 +144,7 @@ class Sources(object):
         self._saved = True
         self.count = 0
 
-        # Sources data
+        # SourceList data
         self.sources_url = []
         self.sources_title = []
         self.sources_subtitle = []
@@ -180,11 +180,11 @@ class Sources(object):
         try:
             self.log.debug("Loading from '%s'" % (fname))
             config = ConfigObj(fname)
-            self.version = config[SOURCES_KEYS.VERS]
-            self.savefile_list = config[SOURCES_KEYS.SAVE_LIST]
-            self.sources_url = config[SOURCES_KEYS.SOURCES_URL]
-            self.sources_title = config[SOURCES_KEYS.SOURCES_TITLE]
-            self.sources_subtitle = config[SOURCES_KEYS.SOURCES_SUBTITLE]
+            self.version = config[SOURCELIST_KEYS.VERS]
+            self.savefile_list = config[SOURCELIST_KEYS.SAVE_LIST]
+            self.sources_url = config[SOURCELIST_KEYS.SOURCES_URL]
+            self.sources_title = config[SOURCELIST_KEYS.SOURCES_TITLE]
+            self.sources_subtitle = config[SOURCELIST_KEYS.SOURCES_SUBTITLE]
 
             self.sources = []
             data = zip(self.sources_url, self.sources_title, self.sources_subtitle)
@@ -209,7 +209,7 @@ class Sources(object):
 
     def save(self, fname=None, inter=True):
         """
-        Save ``Sources`` state to file.
+        Save ``SourceList`` state to file.
 
         In interactive mode (``inter`` == 'True'), prompts user if overwriting existing savefile.
         If overwriting, backup file is created.
@@ -241,11 +241,11 @@ class Sources(object):
         self.log.debug("Creating ``ConfigObj``")
         config = ConfigObj()
         config.filename = fname
-        config[SOURCES_KEYS.VERS] = self.version
-        config[SOURCES_KEYS.SAVE_LIST] = self.savefile_list
-        config[SOURCES_KEYS.SOURCES_URL] = self.sources_url
-        config[SOURCES_KEYS.SOURCES_TITLE] = self.sources_title
-        config[SOURCES_KEYS.SOURCES_SUBTITLE] = self.sources_subtitle
+        config[SOURCELIST_KEYS.VERS] = self.version
+        config[SOURCELIST_KEYS.SAVE_LIST] = self.savefile_list
+        config[SOURCELIST_KEYS.SOURCES_URL] = self.sources_url
+        config[SOURCELIST_KEYS.SOURCES_TITLE] = self.sources_title
+        config[SOURCELIST_KEYS.SOURCES_SUBTITLE] = self.sources_subtitle
 
 
         # Make sure path exists, confirm overwrite in interactive mode
@@ -550,7 +550,7 @@ class Sources(object):
 
 def main():
     """
-    Run interactive mode where the user passes options via CLI to interact with ``Sources``.
+    Run interactive mode where the user passes options via CLI to interact with ``SourceList``.
 
     Interactive options:
         [q]uit   : exit interactive mode
@@ -576,9 +576,9 @@ def main():
     parser = Settings.getParser(sets)
     args, sets = Settings.getArgs(parser, sets)
 
-    # Load Sources
-    log.info("Loading Sources")
-    sources = Sources(log=log, sets=sets)
+    # Load SourceList
+    log.info("Loading SourceList")
+    sourceList = SourceList(log=log, sets=sets)
 
 
     ## Interactive Routine
@@ -592,15 +592,15 @@ def main():
             log.debug("Quitting interactive")
             break
         elif( arg.startswith('a') ):
-            _inter_add(sources, log)
+            _inter_add(sourceList, log)
         elif( arg.startswith('d') ):
-            _inter_del(sources, log)
+            _inter_del(sourceList, log)
         elif( arg.startswith('l') ):
-            sources.list()
+            sourceList.list()
         elif( arg.startswith('f') ):
-            _inter_find(sources, log)
+            _inter_find(sourceList, log)
         elif( arg.startswith('s') ):
-            _inter_save(sources, sets, log)
+            _inter_save(sourceList, sets, log)
         elif( arg.startswith('h') ):
             print '\n', main.__doc__
         else:
@@ -616,15 +616,15 @@ def main():
 
 
 
-def _inter_add(sources, log):
+def _inter_add(sourceList, log):
     """
-    Interactively add a new ``Sources`` entry.
+    Interactively add a new ``SourceList`` entry.
 
     Prompts user for {url, title, subtitle}.
 
     Arguments
     ---------
-        sources <obj> : ``Sources`` object instance
+        sourceList <obj> : ``SourceList`` object instance
         log     <obj> : ``logging.Logger`` instance
 
     """
@@ -649,7 +649,7 @@ def _inter_add(sources, log):
     subt = subt.strip()
 
     # Add New Source
-    retval = sources.add(url, title=titl, subtitle=subt, check=True)
+    retval = sourceList.add(url, title=titl, subtitle=subt, check=True)
     if( retval ): log.info("Added entry for '%s'" % (url))
     else: log.error("Could not add entry for '%s'!" % (url))
 
@@ -658,9 +658,9 @@ def _inter_add(sources, log):
 # } _inter_add()
 
 
-def _inter_del(sources, log):
+def _inter_del(sourceList, log):
     """
-    Interactively delete a ``Sources`` entry.
+    Interactively delete a ``SourceList`` entry.
     """
     import numbers
     log.debug("_inter_del()")
@@ -676,7 +676,7 @@ def _inter_del(sources, log):
         log.error("Could not convert '%s' to integer" % (index))
         return
 
-    retval = sources.delete(index, inter=True)
+    retval = sourceList.delete(index, inter=True)
     if( retval ): log.info("Deleted entry '%d'" % (index))
     else: log.error("Could not delete entry '%d'!" % (index))
 
@@ -685,7 +685,7 @@ def _inter_del(sources, log):
 # } _inter_del()
 
 
-def _inter_find(sources, log):
+def _inter_find(sourceList, log):
     log.debug("_inter_find()")
 
     return
@@ -693,24 +693,24 @@ def _inter_find(sources, log):
 # } _inter_find()
 
 
-def _inter_save(sources, sets, log):
+def _inter_save(sourceList, sets, log):
     """
     Save current sources list to file.
     """
     log.debug("_inter_save()")
 
-    log.info("Settings filename: '%s'" % (sets.file_sources))
-    log.info("``sources.savefile``: '%s'" % (sources.savefile))
+    log.info("Settings filename: '%s'" % (sets.file_sourcelist))
+    log.info("``sourceList.savefile``: '%s'" % (sourceList.savefile))
 
     # Set default save filename
-    savename = sources.savefile
-    if( savename is None ): savename = sets.file_sources
+    savename = sourceList.savefile
+    if( savename is None ): savename = sets.file_sourcelist
 
     # Prompt for filename
     args = raw_input("\tEnter save filename [default '%s'] : " % (savename)).strip()
     if( len(args) > 0 ): savename = args
 
-    retval = sources.save(fname=savename, inter=True)
+    retval = sourceList.save(fname=savename, inter=True)
     if( retval ): log.info("Saved to '%s'" % (savename))
     else: log.error("Could not save to '%s'!" % (savename))
 

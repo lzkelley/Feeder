@@ -48,7 +48,7 @@ class Settings(object):
         self.dir_log = "./log/"
         self.dir_data = "./data/"
         
-        self.file_sources = self.dir_data + "sources.conf"
+        self.file_sourcelist = self.dir_data + "sourcelist.conf"
         
 
         ## Internal Parameters
@@ -77,9 +77,9 @@ def getParser(sets):
                         action="store_true", dest="debug", default=sets.debug,
                         help="print highly verbose output to log")
 
-    parser.add_argument("-s", "--sources", 
-                        dest="SRC_FILE", default=sets.file_sources,
-                        help="sources file.")
+    parser.add_argument("-s", "--sourcelist", 
+                        dest="SRC_FILE", default=sets.file_sourcelist,
+                        help="sourcelist file.")
 
     return parser
 
@@ -97,7 +97,7 @@ def getArgs(parser, sets):
 
     sets.verbose = args.verbose
     sets.debug = args.debug
-    sets.file_sources = args.SRC_FILE
+    sets.file_sourcelist = args.SRC_FILE
 
     return args, sets
 

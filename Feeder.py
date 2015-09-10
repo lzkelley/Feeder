@@ -10,7 +10,7 @@ import Settings, Sources, rss, MyLogger
 
 
 __version__ = 0.1
-_LOG_FILENAME = "Feeder.log"
+_LOG_FILENAME = "feeder.log"
 
 
 def main():
@@ -35,10 +35,10 @@ def main():
     args, sets = Settings.getArgs(parser, sets)
 
     # Load Sources
-    log.info("Initializing Sources")
-    sources = Sources.Sources(log=log, sets=sets)
+    log.info("Initializing SourceList")
+    sourceList = Sources.SourceList(log=log, sets=sets)
     log.info("Loading Sources")
-    names, feeds = loadSources(sources, log)
+    names, feeds = loadSources(sourceList, log)
 
     numFeeds = 0
     numStories = 0
@@ -67,15 +67,15 @@ def main():
 # } main()
 
 
-def loadSources(sources, log):
+def loadSources(sourceList, log):
     """
     """
     log.debug("loadSources()")
 
     names = []
     feeds  = []
-    log.debug(" - Loading feeds for %d sources" % (sources.count))
-    for src in sources.sources:
+    log.debug(" - Loading feeds for %d sources" % (sourceList.count))
+    for src in sourceList.sources:
         names.append(str(src))
         feeds.append(rss.entries(src.url))
 
