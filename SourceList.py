@@ -48,8 +48,6 @@ import zcode.InOut as zio
 
 import MyLogger, Settings, Source
 
-__version__ = '0.1.1'
-
 _LOG_FILENAME = 'sources.log'
 
 
@@ -144,7 +142,7 @@ class SourceList(object):
             if( not confirm ): return False
 
         # Metadata
-        self.version = __version__
+        self.version = Settings.__version__
         self._savefile_list = []
         self.savefile = None
         self._saved = True
@@ -319,14 +317,14 @@ class SourceList(object):
 
         vers = config[SOURCELIST_KEYS.VERS]
         # If version is up-to-date, return config object
-        if( vers == __version__ ):
-            self._log.debug("Version is uptodate at v'%s'" % (__version__))
+        if( vers == Settings.__version__ ):
+            self._log.debug("Version is uptodate at v'%s'" % (Settings.__version__))
             return config
 
 
         # Prompt to update file
         msg = "File '{}' version is v'{}' not current v'{}'"
-        msg = msg.format(fname, vers, __version__)
+        msg = msg.format(fname, vers, Settings.__version__)
         estr = msg + ", cannot load!"                
         # If not interactive, return ``None``
         if( not inter ):
@@ -733,8 +731,7 @@ def main():
     sets = Settings.Settings()
     log = MyLogger.defaultLogger(_LOG_FILENAME, sets=sets)
     log.info("main()")
-    log.debug("version = '%s'" % str(__version__))
-    log.debug("Settings version = '%s'" % (str(sets.version)))
+    log.debug("version = '%s'" % str(Settings.__version__))
 
     # Command-Line Arguments
     log.debug("Getting command line arguments")

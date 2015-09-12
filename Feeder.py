@@ -10,7 +10,6 @@ import numpy as np
 import Settings, SourceList, MyLogger
 
 
-__version__ = 0.1
 _LOG_FILENAME = "feeder.log"
 
 
@@ -27,8 +26,7 @@ def main():
     log = MyLogger.defaultLogger(_LOG_FILENAME, sets=sets)
     log.info("Feeder.py")
     log.debug("main()")
-    log.debug("version = '%s'" % str(__version__))
-    log.debug("Settings version = '%s'" % (str(sets.version)))
+    log.debug("version = '%s'" % str(Settings.__version__))
 
     # Command-Line Arguments
     log.debug("Getting command line arguments")
