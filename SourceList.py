@@ -302,10 +302,12 @@ class SourceList(object):
     def _checkVersion(self, config, fname, inter):
         """
         Make sure the loaded version is up-to-date.  If not, prompt to update, or return ``None``.
+
+        If the file is not up-to-date, it is updated.  A backup file is created by appending the
+        old version number to the previous filename (``fname``; e.g. './data/sources_v0.1.conf').
         
         Arguments
         ---------
-
 
         Returns
         -------
@@ -344,7 +346,12 @@ class SourceList(object):
         
         # Create a backup of the file, and delete original
         self._log.debug("Creating backup")
-        backname = self._backupFile(fname, True)
+        backname = self._backupFile(fname, True, prepend='', append='_v%s' % (vers))
+        if( backname is None ):
+            self._log.debug("Backup failed!")
+            return None
+        else:
+            self._log.debug("Backed up to '%s'" % (backname))
 
         # Convert old, loaded dictionary to new, updated one
         self._log.debug("Updating save data")
@@ -362,7 +369,7 @@ class SourceList(object):
 
 
 
-    def _backupFile(self, fname, delold):
+    def _backupFile(self, fname, delold, append='', prepend='.back_'):
         """
         Create a backup of the given file.
         
@@ -380,8 +387,8 @@ class SourceList(object):
         self._log.debug("_backupFile()")
 
         # Create backup filename
-        oldPath, oldName = os.path.split(fname)
-        backname = os.path.join(oldPath, ".backup_" + oldName)
+        backname = zio.modifyFilename(fname, append=append, prepend=prepend)
+
         # If backup already exists, delete
         if( os.path.exists(backname) ):
             self._log.info("Backup '%s' already exists.  Deleting." % (backname))
