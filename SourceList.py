@@ -1,5 +1,17 @@
 """
 
+
+Notes
+-----
+    - Updating / Changing SourceList save files
+      - - - - - - - - - - - - - - - - - - - - -
+        + Make class of old `KEYS` (e.g. ``_KEYS__V0_1``)
+        + Create method to convert to newest version (e.g. ``_V0_1__to__V0_2``)
+        + Update ``SourceList``'s ``load``, ``save``, and ``new`` methods for changes.
+            - Note that ``load`` might have to makeup some differences...
+        + Update ``__version__`` number.
+
+
 Objects
 -------
     SOURCELIST_KEYS
@@ -15,6 +27,15 @@ Functions
     _inter_save  : Save current ``SourceList`` to file.
 
 
+
+To-Do
+-----
+    1) Add ``info`` interactive option (and associated function) to print summary info,
+       including version, number of sources, etc.
+    2) Create save files for Source data.
+    3) Remove redundancy in ``SourceList`` data --- i.e. the '_sources_*' arrays.
+
+
 """
 
 import os, shutil
@@ -27,7 +48,7 @@ import zcode.InOut as zio
 
 import MyLogger, Settings, Source
 
-__version__ = 0.1
+__version__ = '0.1.1'
 
 _LOG_FILENAME = 'sources.log'
 
@@ -35,11 +56,11 @@ _LOG_FILENAME = 'sources.log'
 class SOURCELIST_KEYS(object):
     VERS = 'version'
     SAVE_LIST = 'savefile_list'
-    SOURCES_URL = 'sources_url'
-    SOURCES_TITLE = 'sources_title'
-    SOURCES_SUBTITLE = 'sources_subtitle'
-
-
+    URLS = 'sources_urls'
+    NAMES = 'sources_names'
+    SUBNAMES = 'sources_subnames'
+    FILENAMES = 'sources_filenames'
+    UPDATED = 'sources_updated'
 
 
 class SourceList(object):
@@ -82,9 +103,8 @@ class SourceList(object):
                 self._log.debug(" - Sources: %d" % (self.count))
                 loaded = True
             else:
-                errStr = "Load Failed!"
-                self._log.error(errStr)
-                raise RuntimeError(errStr)
+                self._log.error("Load Failed!")
+
         else:
             self._log.warning("File '%s' does not exist!" % (fname))
 
@@ -131,9 +151,11 @@ class SourceList(object):
         self.count = 0
 
         # SourceList data
-        self._sources_url = []
-        self._sources_title = []
-        self._sources_subtitle = []
+        self._sources_urls = []
+        self._sources_names = []
+        self._sources_subnames = []
+        self._sources_filenames = []
+        self._sources_updated = []
         self.sources = []
 
 
@@ -159,37 +181,43 @@ class SourceList(object):
 
         # Confirm lose unsaved changes
         if( inter ):
+            # Checks if there are unsaved changes, if so, prompts user
             confirm = self._confirm_unsaved()
             if( not confirm ): return False
 
-        # Try to load file and extract elements
-        try:
-            self._log.debug("Loading from '%s'" % (fname))
-            config = ConfigObj(fname)
-            self.version = config[SOURCELIST_KEYS.VERS]
-            self._savefile_list = config[SOURCELIST_KEYS.SAVE_LIST]
-            self._sources_url = config[SOURCELIST_KEYS.SOURCES_URL]
-            self._sources_title = config[SOURCELIST_KEYS.SOURCES_TITLE]
-            self._sources_subtitle = config[SOURCELIST_KEYS.SOURCES_SUBTITLE]
 
-            self.sources = []
-            data = zip(self._sources_url, self._sources_title, self._sources_subtitle)
-            for ii, (url, tit, sub) in enumerate(data):
-                self.sources.append(Source.Source(url, tit, sub))
+        # Load file as ``ConfigObj``
+        self._log.info("Loading ``SourceList`` from '%s'" % (fname))
+        config = ConfigObj(fname)
 
-        except:
-            import sys
-            self._log.error("Could not load!! {0:s} : {1:s}".format(*sys.exc_info()))
-            retval = False
-        # Add appropriate metadata on success
-        else:
-            retval = True
-            self.savefile = fname
-            self._saved = True
-            self._recount()
+        # Check version, update if needed
+        config = self._checkVersion(config, fname, inter)
+        if( config is None ):
+            self._log.error("Version check on '%s' failed!" % (fname))
+            return False
+
+
+        # Load Raw Data from save file
+        self.version = config[SOURCELIST_KEYS.VERS]
+        self._savefile_list = config[SOURCELIST_KEYS.SAVE_LIST]
+        self._sources_urls = config[SOURCELIST_KEYS.URLS]
+        self._sources_names = config[SOURCELIST_KEYS.NAMES]
+        self._sources_subnames = config[SOURCELIST_KEYS.SUBNAMES]
+        self._sources_filenames = config[SOURCELIST_KEYS.FILENAMES]
+        self._sources_updated = config[SOURCELIST_KEYS.UPDATED]
+
+        # Construct list of ``Source``s from raw data
+        self.sources = []
+        data = zip(self._sources_urls, self._sources_names, self._sources_subnames)
+        for ii, (url, tit, sub) in enumerate(data):
+            self.sources.append(Source.Source(url, tit, sub))
+
+        # Set metadata
+        self.savefile = fname
+        self._recount()
+        self._saved = True
             
-
-        return retval
+        return True
 
 
 
@@ -229,9 +257,11 @@ class SourceList(object):
         config.filename = fname
         config[SOURCELIST_KEYS.VERS] = self.version
         config[SOURCELIST_KEYS.SAVE_LIST] = self._savefile_list
-        config[SOURCELIST_KEYS.SOURCES_URL] = self._sources_url
-        config[SOURCELIST_KEYS.SOURCES_TITLE] = self._sources_title
-        config[SOURCELIST_KEYS.SOURCES_SUBTITLE] = self._sources_subtitle
+        config[SOURCELIST_KEYS.URLS] = self._sources_urls
+        config[SOURCELIST_KEYS.NAMES] = self._sources_names
+        config[SOURCELIST_KEYS.SUBNAMES] = self._sources_subnames
+        config[SOURCELIST_KEYS.FILENAMES] = self._sources_filenames
+        config[SOURCELIST_KEYS.UPDATED] = self._sources_updated
 
 
         # Make sure path exists, confirm overwrite in interactive mode
@@ -240,25 +270,11 @@ class SourceList(object):
             conf = zio.promptYesNo("\tDestination '%s' already exists, overwrite?" % (fname))
             if( not conf ): return False
 
-            # Create backup filename
-            oldPath, oldName = os.path.split(fname)
-            backname = os.path.join(oldPath, ".backup_" + oldName)
-            # If backup already exists, delete
-            if( os.path.exists(backname) ):
-                self._log.info("Backup '%s' already exists.  Deleting." % (backname))
-                os.remove(backname)
-
-            # Move old file to backup
-            self._log.info("Moving '%s' ==> '%s'" % (fname, backname))
-            shutil.move(fname, backname)
-            # Look for problems
-            if( os.path.exists(fname) ):
-                self._log.error("Old file '%s' still exists!" % (fname))
+            # Create backup
+            backname = self._backupFile(fname)
+            if( backname is None ):
+                self._log.error("Backup of '%s' failed!" % (fname))
                 return False
-
-            if( not os.path.exists(backname) ):
-                self._log.error("Backup '%s' does not exist!" % (backname))
-                self._log.error("Lets hope the save works...")
 
 
         # Save data
@@ -281,6 +297,112 @@ class SourceList(object):
 
         return retval
 
+
+
+    def _checkVersion(self, config, fname, inter):
+        """
+        Make sure the loaded version is up-to-date.  If not, prompt to update, or return ``None``.
+        
+        Arguments
+        ---------
+
+
+        Returns
+        -------
+            retval <obj> : ``config`` dictionary on success, ``None`` on failure
+        
+        """
+
+        self._log.debug("_checkVersion()")
+
+        vers = config[SOURCELIST_KEYS.VERS]
+        # If version is up-to-date, return config object
+        if( vers == __version__ ):
+            self._log.debug("Version is uptodate at v'%s'" % (__version__))
+            return config
+
+
+        # Prompt to update file
+        msg = "File '{}' version is v'{}' not current v'{}'"
+        msg = msg.format(fname, vers, __version__)
+        estr = msg + ", cannot load!"                
+        # If not interactive, return ``None``
+        if( not inter ):
+            self._log.warning(msg)
+            self._log.warning("Updating to new version!")
+        # If interactive, prompt user to update file
+        else:
+            msg += "; update to load?"
+            conf = zio.promptYesNo("\t" + msg, default='y')
+            if( not conf ): 
+                self._log.error(estr)
+                return None
+
+
+        ## Update file
+        #  -----------
+        
+        # Create a backup of the file, and delete original
+        self._log.debug("Creating backup")
+        backname = self._backupFile(fname, True)
+
+        # Convert old, loaded dictionary to new, updated one
+        self._log.debug("Updating save data")
+        config = self._updateSave(config)
+
+        # Save new version
+        vers = config[SOURCELIST_KEYS.VERS]
+        self._log.info("Saving new version v'%s' to '%s'" % (vers, fname))
+        config.write()
+        if( not os.path.exists(fname) ):
+            self._log.error("Filename '%s' does not exist!  Save failed!!" % (fname))
+            return None
+
+        return config
+
+
+
+    def _backupFile(self, fname, delold):
+        """
+        Create a backup of the given file.
+        
+        Arguments
+        ---------
+            fname <str>   : filename to backup
+            delold <bool> : delete the original file after backup
+
+        Returns
+        -------
+            retval <obj> : backup filename ``backname`` on success, ``None`` on failure.
+
+        """
+
+        self._log.debug("_backupFile()")
+
+        # Create backup filename
+        oldPath, oldName = os.path.split(fname)
+        backname = os.path.join(oldPath, ".backup_" + oldName)
+        # If backup already exists, delete
+        if( os.path.exists(backname) ):
+            self._log.info("Backup '%s' already exists.  Deleting." % (backname))
+            os.remove(backname)
+
+        # Move old file to backup
+        self._log.info("Copying '%s' ==> '%s'" % (fname, backname))
+        shutil.copy2(fname, backname)
+
+        # Make sure backup created
+        if( not os.path.exists(backname) ):
+            self._log.error("Backup '%s' does not exist!" % (backname))
+            return None
+
+        
+        # Delete old file if desired
+        if( delold ):
+            self._log.info("Deleting '%s'" % (fname))
+            os.remove(fname)
+
+        return backname
 
 
     def add(self, url, title=None, subtitle=None, check=True):
@@ -323,9 +445,9 @@ class SourceList(object):
                 retval = False
                 continue
 
-            self._sources_url.append(uu)
-            self._sources_title.append(tt)
-            self._sources_subtitle.append(ss)
+            self._sources_urls.append(uu)
+            self._sources_names.append(tt)
+            self._sources_subnames.append(ss)
             self.sources.append( Source(uu, tt, ss) )
             
 
@@ -368,9 +490,9 @@ class SourceList(object):
         del_sub = []
         del_src = []
         for id in reversed(index):
-            del_url.append(self._sources_url.pop(id))
-            del_tit.append(self._sources_title.pop(id))
-            del_sub.append(self._sources_subtitle.pop(id))
+            del_url.append(self._sources_urls.pop(id))
+            del_tit.append(self._sources_names.pop(id))
+            del_sub.append(self._sources_subnames.pop(id))
             del_src.append(self.sources.pop(id))
 
         self._log.info("Deleted URLs:")
@@ -413,7 +535,7 @@ class SourceList(object):
                 self._log.error("Unrecognized `index` = '%s'!" % (str(index)))
                 self._log.warning("Returning all entries")
 
-            ids = np.arange(len(self._sources_url))
+            ids = np.arange(len(self._sources_urls))
 
 
         ## Select target elements and return
@@ -513,9 +635,9 @@ class SourceList(object):
         """
 
         self._log.debug("_recount()")
-        uselists = [ self._sources_url, self._sources_title, self._sources_subtitle, self.sources ]
+        uselists = [ self._sources_urls, self._sources_names, self._sources_subnames, self.sources ]
 
-        count = np.size(self._sources_url)
+        count = np.size(self._sources_urls)
         if( self._same_size(*uselists) ): self._log.debug("All lists have length %d" % (count))
         else:
             self._log.error("Sources list lengths do not match!")
@@ -541,6 +663,45 @@ class SourceList(object):
         counts = [ np.size(ar) for ar in arrs ]
         if( len(set(counts)) == 1 ): return True
         return False
+
+
+
+    def _updateSave(self, old):
+        """
+        """
+        self._log.debug("_updateSave()")
+        vers = old[SOURCELIST_KEYS.VERS]
+
+        if( vers.startswith('0.1') ):
+            new = self._V0_1__to__V0_2(old)
+
+        else:
+            estr = "Unknown version v'%s'!" % (vers)
+            self._log.error(estr)
+            return None
+
+        return new
+
+
+    def _V0_1__to__V0_2(self, old):
+        self._log.debug("_V0_1__to__V0_2()")
+        new = ConfigObj()
+        new.filename = old.filename
+        new[SOURCELIST_KEYS.VERS] = '0.1.1'
+        new[SOURCELIST_KEYS.URLS] = old[_KEYS__V0_1.SOURCES_URL]
+        new[SOURCELIST_KEYS.NAMES] = old[_KEYS__V0_1.SOURCES_TITLE]
+        new[SOURCELIST_KEYS.SUBNAMES] = old[_KEYS__V0_1.SOURCES_SUBTITLE]
+        new[SOURCELIST_KEYS.SAVE_LIST] = old[_KEYS__V0_1.SAVE_LIST]
+        new[SOURCELIST_KEYS.FILENAMES] = [ ]
+        new[SOURCELIST_KEYS.UPDATED] = [ ]
+
+        return new
+
+
+
+
+
+
 
 
 
@@ -584,6 +745,7 @@ def main():
     while( True ):
         arg = raw_input(prompt)
         arg = arg.strip().lower()
+        print ""
         log.debug("arg = '%s'" % (arg))
         if(   arg.startswith('q') ):
             log.debug("Quitting interactive")
@@ -714,6 +876,15 @@ def _inter_save(sourceList, sets, log):
     return
 
 # } _inter_save()
+
+
+
+class _KEYS__V0_1(object):
+    VERS = 'version'
+    SAVE_LIST = 'savefile_list'
+    SOURCES_URL = 'sources_url'
+    SOURCES_TITLE = 'sources_title'
+    SOURCES_SUBTITLE = 'sources_subtitle'
 
 
 
