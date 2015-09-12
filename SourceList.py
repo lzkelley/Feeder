@@ -17,7 +17,6 @@ Functions
 
 """
 
-# import json, pandas
 import os, shutil
 from configobj import ConfigObj
 from enum import Enum
@@ -472,8 +471,8 @@ class SourceList(object):
         """
 
         url = src.url
-        tit = src.title
-        sub = src.subtitle
+        tit = src.name
+        sub = src.subname
 
         tstr = tit
         if( len(sub) > 0 ): tstr += " - " + sub
@@ -632,7 +631,7 @@ def _inter_add(sourceList, log):
     example = 'http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'
     while( True ):
         url = raw_input("\tURL (e.g. '%s') : " % (example))
-        url = url.strip().lower()
+        url = url.strip()
         # Catch 'q'uit request
         if( url == 'q' ):
             log.debug("Break '%s'" % (url))
