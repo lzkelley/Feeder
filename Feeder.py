@@ -2,11 +2,12 @@
 
 """
 
+from __future__ import unicode_literals
 
 from datetime import datetime
 import numpy as np
 
-import Settings, Sources, rss, MyLogger
+import Settings, SourceList, MyLogger
 
 
 __version__ = 0.1
@@ -36,28 +37,23 @@ def main():
 
     # Load Sources
     log.info("Initializing SourceList")
-    sourceList = Sources.SourceList(log=log, sets=sets)
-    log.info("Loading Sources")
-    names, feeds = loadSources(sourceList, log)
+    sourceList = SourceList.SourceList(log=log, sets=sets)
+    log.info("Loading Feeds")
+    #sourceList.getFeeds()
 
-    numFeeds = 0
-    numStories = 0
 
-    for nn,ff in zip(names, feeds):
-        titles = rss.stringTitles(ff, True)
-        if( np.size(titles) > 0 ):
-            numFeeds += 1
-            numStories += np.size(titles)
+    # Print New Articles
+    for ii, src in enumerate(sourceList.sources):
+        src.getFeed()
+        print u"{0:3d} : {1}".format(ii, src.str())
 
-        print nn
-        for tt in titles:
-            print "\t",tt
+        if( src.valid ):
+            for jj,art in enumerate(src.articles):
+                print u"\t{0:3d} : {1}".format(jj, art.str())
 
-        print ""
+        else:
+            print "\tINVALID"
 
-        
-    print "Feeds: %d" % (numFeeds)
-    print "Stores: %d" % (numStories)
 
     end = datetime.now()
     log.info("Done After %s\n" % (str(end-beg)))
