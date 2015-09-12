@@ -2,15 +2,17 @@
 
 """
 
+from __future__ import unicode_literals
+
 import feedparser, time
 from bs4 import BeautifulSoup
 import numpy as np
 
 import MyLogger, Settings
 
-#TITLE_WIDTH = 140
-
-
+WIDTH_TITLE = 100
+WIDTH_TIME  = 30
+WIDTH_NAME  = 50
 
 class Article(object):
     
@@ -35,6 +37,15 @@ class Article(object):
         self.valid = True
         return
 
+    def str(self):
+        """
+        Note: DO NOT OVERRIDE `__str__` returning unicode!
+        """
+        myStr = u"{0:{w0}.{w0}} - {1:{w1}.{w1}}"
+        myStr = myStr.format(self.title, time.asctime(self.updated), w0=WIDTH_TITLE, w1=WIDTH_TIME)
+        return myStr
+
+
     def _hasGet(self, ent, key):
         if( hasattr(ent, key) ): return getattr(ent, key)
         else: return None
@@ -45,7 +56,7 @@ class Article(object):
 class Source(object):
 
     def __init__(self, url, name='', subname=''):
-        self.url = url.lower()
+        self.url = url
         self.name = name
         self.subname = subname
 
@@ -53,6 +64,7 @@ class Source(object):
         self.articles = []
         self.count = 0
         self.status = -1
+        self.title = u''
 
         self.time = None
         self.feed_time = None
@@ -65,8 +77,13 @@ class Source(object):
         return
 
     
-    def __str__(self):
-        return self.name + " " + self.subname
+    def str(self):
+        """
+        Note: DO NOT OVERRIDE `__str__` returning unicode!
+        """
+        myStr = u"{0} - {1}"
+        myStr = myStr.format(self.title, self.time_str)
+        return myStr
 
 
     def getFeed(self):
@@ -105,14 +122,9 @@ class Source(object):
             self.time = self.article_time
 
 
-        self.time_str = time.asctime(self.time)
+        self.time_str = time.asctime(self.time) #.encode('utf-8')
         if( self.feed_time is not None ): self.feed_time_str = time.asctime(self.feed_time)
         if( self.article_time is not None ): self.article_time_str = time.asctime(self.article_time)
-
-        print "\n", str(self)
-        print "Time         = ", self.time_str
-        print "Feed Time    = ", self.feed_time_str
-        print "Article Time = ", self.article_time_str
 
         self.valid = True
         return self.valid
@@ -147,8 +159,6 @@ class Source(object):
             return getattr(feed.feed, key)
 
         return None
-    
-
     
 
 '''
