@@ -64,19 +64,30 @@ class SOURCELIST_KEYS(object):
 class SourceList(object):
     """
 
+    Notes
+    -----
+
+
     Functions
     ---------
-        new  : Initialize a new (or clear existing) state.
-        load : Load sources list from the given filename.
-        save : Save ``SourceList`` state to file.
-        add  : Add one or multiple entries to sources.
-        delete : Remove one or multiple entries from sources.
-        _get : Retrieve one or multiple sources from list (default: return all).
-        list : List some or all sources to stdout.
-        _str_src : Create a string representation of a single source.
+        new      : Initialize a new (or clear existing) state.
+        load     : Load sources list from the given filename.
+        save     : Save ``SourceList`` state to file.
+        add      : Add one or multiple entries to sources.
+        delete   : Remove one or multiple entries from sources.
+        list     : List some or all sources to stdout.
+        getFeeds : Tell earch ``Source`` object to get its RSS feed.
+
+        _get             : Retrieve one or multiple sources from list (default: return all).
+        _checkVersion    : Make sure the loaded version is up-to-date.  Prompt to update.
+        _backupFile      : Create a backup of the given file.
+        _str_src         : Create a string representation of a single source.
         _confirm_unsaved : If there is unsaved data, Prompt user (via CLI) to confirm overwrite.
-        _recount : Count the current number of sources and assure all lists match in length.
-        _same_size : Check whether all of the given arrays or lists are the same size.
+        _recount         : Count the current number of sources and assure all lists match in length.
+        _same_size       : Check whether all of the given arrays or lists are the same size.
+        _clearSourceList : Reset source lists to empty.
+        _updateSave      : Based on the version of old save data, delegate conversion to new style.
+        _V0_1__to__V0_2  : Convert from save data v0.1 to v0.2.
 
     """
 
@@ -149,16 +160,10 @@ class SourceList(object):
         self.count = 0
 
         # SourceList data
-        self._src_urls = []
-        self._src_names = []
-        self._src_subnames = []
-        self._src_filenames = []
-        self._src_updated = []
+        self._clearSourceLists()
         self.sources = []
 
-
         return True
-
 
 
 
@@ -262,6 +267,16 @@ class SourceList(object):
                 return retval
 
 
+        # Update internal parameters based on list of sources
+        self._clearSourceLists()
+        for src in self.sources:
+            self._src_urls.append( src.url )
+            self._src_names.append( src.name )
+            self._src_subnames.append( src.subname )
+            self._src_filenames.append( src.filename )
+            self._src_updated.append( src.updated )
+
+
         # Setup data using ``ConfigObj``
         self._log.debug("Creating ``ConfigObj``")
         config = ConfigObj()
@@ -310,6 +325,176 @@ class SourceList(object):
 
 
 
+    def add(self, url, title=None, subtitle=None, check=True):
+        """
+        Add one or multiple entries to sources.
+
+        If ``title`` and/or ``subtitle`` are provided, they must match length of ``url``.
+        
+        Arguments
+        ---------
+            url      <str>([N])  : URL of new entry/entries.
+            title    <str>([N])  : Titles of new entries.
+            subtitle <str>([N])  : Subtitles of new entries.
+            check    <bool>      : Check each URL for existence before adding.
+
+        Returns
+        -------
+            retval <bool> : success if all passed entries were added.
+
+        """
+        self._log.debug("add()")
+
+        # Make sure url(s) is(are) iterable
+        if( isinstance(url, str) ): url = [ url ]
+        # If no title/subtitle are provided, set to empty strings
+        if( title is None ): title = ['']*np.size(url)
+        if( subtitle is None ): subtitle = ['']*np.size(url)
+
+        # Make sure all arrays are the same length
+        if( not self._same_size(url, title, subtitle) ):
+            self._log.error("values to add are not the same length!")
+            return False
+
+        # Iterate over and add all new entries
+        retval = True
+        for uu, tt, ss in zip(url, title, subtitle):
+            # Check that url exists, skip if not
+            if( check and not zio.checkURL(uu) ):
+                self._log.warning("URL '%s' does not exist, skipping!" % (uu))
+                retval = False
+                continue
+
+            self.sources.append( Source(uu, tt, ss) )
+
+
+        # update metadata
+        self._recount()
+        self._saved = False
+
+        return retval
+
+
+
+    def delete(self, index, inter=True):
+        """
+        Remove one or multiple entries from sources.
+        
+        Arguments
+        ---------
+            index <int>([N]) : index or indices to delete.
+            inter <bool>     : interactive, if so, confirm delete.
+
+        Returns
+        -------
+            retval <bool> : ``True`` on successful deletion
+
+        """
+        self._log.debug("delete()")
+
+        # If interactive, show sources and confirm deletion
+        if( inter ):
+            print "Delete the following sources: "
+            self.list(index)
+            conf = zio.promptYesNo('Are you sure?')
+            if( not conf ): return False
+
+        # Make sure indices are iterable
+        if( not np.iterable(index) ): index = [index]
+
+        # Iterate over IDs and delete
+        #     MUST REVERSE ITERATE so that index numbers are preserved for subsequent entries.
+        del_src = []
+        for id in reversed(index):
+            del_src.append(self.sources.pop(id))
+
+        # Report deleted urls
+        self._log.info("Deleted URLs:")
+        for src in del_src:
+            self._log.info(" - '%s'" % (src.url))
+
+        # Update metadata
+        self._recount()
+        self._saved = False
+
+        return True
+
+
+
+    def list(self, index=None):
+        """
+        List some or all sources to stdout.
+
+        Arguments
+        ---------
+            index <obj> : int, list of ints, or `None` for all entries.
+
+        """
+        self._log.debug("list()")
+
+        # Get entries and ID numbers
+        ids, srcs = self._get(index=index)
+        # Print each source
+        for id,src in zip(ids, srcs):
+            print "\t",self._str_src(id, src)
+
+        return
+
+
+
+    def getFeeds(self):
+        """
+        Tell earch ``Source`` object to get its RSS feed.
+        """
+        self._log.debug("getFeeds()")
+        numValid = 0
+        for src in self.sources:
+            if( src.getFeed() ): numValid += 1
+
+        return
+
+
+
+    def _get(self, index=None):
+        """
+        Retrieve one or multiple sources from list (default: return all).
+
+        Arguments
+        ---------
+            index <obj> : target index or indices to retrieve.
+
+        Returns
+        -------
+            ids  <int>([N])   : returned index numbers.
+            srcs <str>[(N),3] : sources, each is {url, title, subtitle}
+        
+        """
+        self._log.debug("_get()")
+
+        ## Convert index to a slicing object
+        import numbers
+        # Single integer number
+        if( isinstance(index, numbers.Integral) ): 
+            ids = np.arange(index, index+1)
+        # List of numbers
+        elif( np.iterable(index) ): 
+            ids = np.array(index)
+        # Otherwise, return all sources
+        else:
+            if( index is not None ):
+                self._log.error("Unrecognized `index` = '%s'!" % (str(index)))
+                self._log.warning("Returning all entries")
+
+            ids = np.arange(len(self._src_urls))
+
+
+        ## Select target elements and return
+        srcs = [ self.sources[ii] for ii in ids ]
+
+        return ids, srcs
+
+
+
     def _checkVersion(self, config, fname, inter):
         """
         Make sure the loaded version is up-to-date.  If not, prompt to update, or return ``None``.
@@ -319,6 +504,9 @@ class SourceList(object):
         
         Arguments
         ---------
+            config <obj>  : config data dictionary loaded from save file
+            fname  <str>  : filename from which data was loaded
+            inter  <bool> : interactive session, if so prompts to update out of date data.
 
         Returns
         -------
@@ -423,177 +611,6 @@ class SourceList(object):
         return backname
 
 
-    def add(self, url, title=None, subtitle=None, check=True):
-        """
-        Add one or multiple entries to sources.
-
-        If ``title`` and/or ``subtitle`` are provided, they must match length of ``url``.
-        
-        Arguments
-        ---------
-            url      <str>([N])  : URL of new entry/entries.
-            title    <str>([N])  : Titles of new entries.
-            subtitle <str>([N])  : Subtitles of new entries.
-            check    <bool>      : Check each URL for existence before adding.
-
-        Returns
-        -------
-            retval <bool> : success if all passed entries were added.
-
-        """
-        self._log.debug("add()")
-
-        # Make sure url(s) is(are) iterable
-        if( isinstance(url, str) ): url = [ url ]
-        # If no title/subtitle are provided, set to empty strings
-        if( title is None ): title = ['']*np.size(url)
-        if( subtitle is None ): subtitle = ['']*np.size(url)
-
-        # Make sure all arrays are the same length
-        if( not self._same_size(url, title, subtitle) ):
-            self._log.error("values to add are not the same length!")
-            return False
-
-        # Iterate over and add all new entries
-        retval = True
-        for uu, tt, ss in zip(url, title, subtitle):
-            # Check that url exists, skip if not
-            if( check and not zio.checkURL(uu) ):
-                self._log.warning("URL '%s' does not exist, skipping!" % (uu))
-                retval = False
-                continue
-
-            self._src_urls.append(uu)
-            self._src_names.append(tt)
-            self._src_subnames.append(ss)
-            self.sources.append( Source(uu, tt, ss) )
-            
-
-        # update metadata
-        self._recount()
-        self._saved = False
-
-        return retval
-
-
-
-    def delete(self, index, inter=True):
-        """
-        Remove one or multiple entries from sources.
-        
-        Arguments
-        ---------
-            index <int>([N]) : index or indices to delete.
-            inter <bool>     : interactive, if so, confirm delete.
-
-        Returns
-        -------
-            retval <bool> : ``True`` on successful deletion
-
-        """
-        self._log.debug("delete()")
-
-        if( inter ):
-            print "Delete the following sources: "
-            self.list(index)
-            conf = zio.promptYesNo('Are you sure?')
-            if( not conf ): return False
-
-        if( not np.iterable(index) ): index = [index]
-
-        # Iterate over IDs and delete
-        #     MUST REVERSE ITERATE so that index numbers are preserved for subsequent entries.
-        del_url = []
-        del_tit = []
-        del_sub = []
-        del_src = []
-        for id in reversed(index):
-            del_url.append(self._src_urls.pop(id))
-            del_tit.append(self._src_names.pop(id))
-            del_sub.append(self._src_subnames.pop(id))
-            del_src.append(self.sources.pop(id))
-
-        self._log.info("Deleted URLs:")
-        for url in del_url:
-            self._log.info(" - '%s'" % (url))
-
-        self._recount()
-        self._saved = False
-
-        return True
-
-
-    def _get(self, index=None):
-        """
-        Retrieve one or multiple sources from list (default: return all).
-
-        Arguments
-        ---------
-            index <obj> : target index or indices to retrieve.
-
-        Returns
-        -------
-            ids  <int>([N])   : returned index numbers.
-            srcs <str>[(N),3] : sources, each is {url, title, subtitle}
-        
-        """
-        self._log.debug("_get()")
-
-        ## Convert index to a slicing object
-        import numbers
-        # Single integer number
-        if( isinstance(index, numbers.Integral) ): 
-            ids = np.arange(index, index+1)
-        # List of numbers
-        elif( np.iterable(index) ): 
-            ids = np.array(index)
-        # Otherwise, return all sources
-        else:
-            if( index is not None ):
-                self._log.error("Unrecognized `index` = '%s'!" % (str(index)))
-                self._log.warning("Returning all entries")
-
-            ids = np.arange(len(self._src_urls))
-
-
-        ## Select target elements and return
-        srcs = [ self.sources[ii] for ii in ids ]
-
-        return ids, srcs
-
-
-
-    def list(self, index=None):
-        """
-        List some or all sources to stdout.
-
-        Arguments
-        ---------
-            index <obj> : int, list of ints, or `None` for all entries.
-
-        """
-        self._log.debug("list()")
-
-        # Get entries and ID numbers
-        ids, srcs = self._get(index=index)
-        # Print each source
-        for id,src in zip(ids, srcs):
-            print "\t",self._str_src(id, src)
-
-        return
-
-
-
-    def getFeeds(self):
-        """
-        """
-        self._log.debug("getFeeds()")
-        numValid = 0
-        for src in self.sources:
-            if( src.getFeed() ): numValid += 1
-
-        return
-
 
     def _str_src(self, id, src):
         """
@@ -683,9 +700,21 @@ class SourceList(object):
         return False
 
 
+    def _clearSourceLists(self):
+        """
+        Reset source lists to empty.
+        """
+        self._src_urls = []
+        self._src_names = []
+        self._src_subnames = []
+        self._src_filenames = []
+        self._src_updated = []
+        return
+
 
     def _updateSave(self, old):
         """
+        Based on the version of old dictionary save data, delegate conversion to new style.
         """
         self._log.debug("_updateSave()")
         vers = old[SOURCELIST_KEYS.VERS]
@@ -702,6 +731,9 @@ class SourceList(object):
 
 
     def _V0_1__to__V0_2(self, old):
+        """
+        Convert from save data v0.1 to v0.2.
+        """
         self._log.debug("_V0_1__to__V0_2()")
         new = ConfigObj()
         new.filename = old.filename
