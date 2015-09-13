@@ -33,12 +33,12 @@ To-Do
     1) Add ``info`` interactive option (and associated function) to print summary info,
        including version, number of sources, etc.
     2) Create save files for Source data.
-    3) Remove redundancy in ``SourceList`` data --- i.e. the '_sources_*' arrays.
+    3) Remove redundancy in ``SourceList`` data --- i.e. the '_src_*' arrays.
 
 
 """
 
-import os, shutil
+import os, shutil, sys
 from configobj import ConfigObj
 from enum import Enum
 from datetime import datetime
@@ -149,11 +149,11 @@ class SourceList(object):
         self.count = 0
 
         # SourceList data
-        self._sources_urls = []
-        self._sources_names = []
-        self._sources_subnames = []
-        self._sources_filenames = []
-        self._sources_updated = []
+        self._src_urls = []
+        self._src_names = []
+        self._src_subnames = []
+        self._src_filenames = []
+        self._src_updated = []
         self.sources = []
 
 
@@ -198,17 +198,30 @@ class SourceList(object):
         # Load Raw Data from save file
         self.version = config[SOURCELIST_KEYS.VERS]
         self._savefile_list = config[SOURCELIST_KEYS.SAVE_LIST]
-        self._sources_urls = config[SOURCELIST_KEYS.URLS]
-        self._sources_names = config[SOURCELIST_KEYS.NAMES]
-        self._sources_subnames = config[SOURCELIST_KEYS.SUBNAMES]
-        self._sources_filenames = config[SOURCELIST_KEYS.FILENAMES]
-        self._sources_updated = config[SOURCELIST_KEYS.UPDATED]
+        self._src_urls = config[SOURCELIST_KEYS.URLS]
+        self._src_names = config[SOURCELIST_KEYS.NAMES]
+        self._src_subnames = config[SOURCELIST_KEYS.SUBNAMES]
+
+        numSrcs = len(self._src_irls)
+        filenames = config[SOURCELIST_KEYS.FILENAMES]
+        if( len(filenames) == numSrcs ): self._src_filenames = filenames
+        else:                            self._src_filenames = ['']*numSrcs
+        updated = config[SOURCELIST_KEYS.UPDATED]
+        if( len(updated) == numSrcs ): self._src_updated = updated
+        else:                          self._src_updated = [None]*numSrcs
 
         # Construct list of ``Source``s from raw data
         self.sources = []
-        data = zip(self._sources_urls, self._sources_names, self._sources_subnames)
-        for ii, (url, tit, sub) in enumerate(data):
-            self.sources.append(Source.Source(url, tit, sub))
+        for ii in xrange(numSrcs):
+            url = self._src_urls[ii]
+            nam = self._src_names[ii]
+            sub = self._src_subnames[ii]
+            fil = self._src_filenames[ii]
+            upd = self._src_updated[ii]
+
+            src = Source.Source(url, nam, sub, fil, upd)
+            self.sources.append(src)
+
 
         # Set metadata
         self.savefile = fname
@@ -255,11 +268,11 @@ class SourceList(object):
         config.filename = fname
         config[SOURCELIST_KEYS.VERS] = self.version
         config[SOURCELIST_KEYS.SAVE_LIST] = self._savefile_list
-        config[SOURCELIST_KEYS.URLS] = self._sources_urls
-        config[SOURCELIST_KEYS.NAMES] = self._sources_names
-        config[SOURCELIST_KEYS.SUBNAMES] = self._sources_subnames
-        config[SOURCELIST_KEYS.FILENAMES] = self._sources_filenames
-        config[SOURCELIST_KEYS.UPDATED] = self._sources_updated
+        config[SOURCELIST_KEYS.URLS] = self._src_urls
+        config[SOURCELIST_KEYS.NAMES] = self._src_names
+        config[SOURCELIST_KEYS.SUBNAMES] = self._src_subnames
+        config[SOURCELIST_KEYS.FILENAMES] = self._src_filenames
+        config[SOURCELIST_KEYS.UPDATED] = self._src_updated
 
 
         # Make sure path exists, confirm overwrite in interactive mode
@@ -450,9 +463,9 @@ class SourceList(object):
                 retval = False
                 continue
 
-            self._sources_urls.append(uu)
-            self._sources_names.append(tt)
-            self._sources_subnames.append(ss)
+            self._src_urls.append(uu)
+            self._src_names.append(tt)
+            self._src_subnames.append(ss)
             self.sources.append( Source(uu, tt, ss) )
             
 
@@ -495,9 +508,9 @@ class SourceList(object):
         del_sub = []
         del_src = []
         for id in reversed(index):
-            del_url.append(self._sources_urls.pop(id))
-            del_tit.append(self._sources_names.pop(id))
-            del_sub.append(self._sources_subnames.pop(id))
+            del_url.append(self._src_urls.pop(id))
+            del_tit.append(self._src_names.pop(id))
+            del_sub.append(self._src_subnames.pop(id))
             del_src.append(self.sources.pop(id))
 
         self._log.info("Deleted URLs:")
@@ -540,7 +553,7 @@ class SourceList(object):
                 self._log.error("Unrecognized `index` = '%s'!" % (str(index)))
                 self._log.warning("Returning all entries")
 
-            ids = np.arange(len(self._sources_urls))
+            ids = np.arange(len(self._src_urls))
 
 
         ## Select target elements and return
@@ -640,9 +653,9 @@ class SourceList(object):
         """
 
         self._log.debug("_recount()")
-        uselists = [ self._sources_urls, self._sources_names, self._sources_subnames, self.sources ]
+        uselists = [ self._src_urls, self._src_names, self._src_subnames, self.sources ]
 
-        count = np.size(self._sources_urls)
+        count = np.size(self._src_urls)
         if( self._same_size(*uselists) ): self._log.debug("All lists have length %d" % (count))
         else:
             self._log.error("Sources list lengths do not match!")
