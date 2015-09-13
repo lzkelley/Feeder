@@ -19,6 +19,10 @@ import argparse
 __version__ = '0.1.1'
 
 
+FILENAME_MIN_LEN = 8
+STR_TITLE_LEN = 100
+STR_TIME_LEN  = 30
+
 
 class Settings(object):
     """
