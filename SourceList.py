@@ -207,7 +207,7 @@ class SourceList(object):
         self._src_names = config[SOURCELIST_KEYS.NAMES]
         self._src_subnames = config[SOURCELIST_KEYS.SUBNAMES]
 
-        numSrcs = len(self._src_irls)
+        numSrcs = len(self._src_urls)
         filenames = config[SOURCELIST_KEYS.FILENAMES]
         if( len(filenames) == numSrcs ): self._src_filenames = filenames
         else:                            self._src_filenames = ['']*numSrcs
