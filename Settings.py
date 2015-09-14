@@ -22,7 +22,7 @@ __version__ = '0.1.1'
 FILENAME_MIN_LEN = 8
 STR_TITLE_LEN = 100
 STR_TIME_LEN  = 30
-
+SOURCE_FILE_TYPE = '.json'
 
 class Settings(object):
     """
@@ -53,7 +53,6 @@ class Settings(object):
         self.dir_data = "./data/"
         
         self.file_sourcelist = self.dir_data + "sourcelist.conf"
-        
 
         ## Internal Parameters
         #  -------------------
