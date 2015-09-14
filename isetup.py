@@ -1,6 +1,6 @@
 
 
-import Feeder, Settings, Sources, rss, MyLogger, feedparser
-reload(Feeder); reload(Settings); reload(Sources)
-sets = Settings.Settings(); log = MyLogger.defaultLogger('temp.log', sets); sourceList = Sources.SourceList(sets=sets, log=log)
+import Feeder, SourceList, Settings, Source, MyLogger, feedparser
+reload(Feeder); reload(Settings); reload(Source); reload(SourceList)
+sets = Settings.Settings(); log = MyLogger.defaultLogger('temp.log', sets); sourceList = SourceList.SourceList(sets=sets, log=log)
 
