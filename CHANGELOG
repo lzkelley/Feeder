@@ -9,6 +9,9 @@ Change Log
       when those files are updated.  Not implemented yet.
 - Settings.py
     + The `__version__` now corresponds to the global version of the project.
+- Source.py
+    + Added methods 'saveArticles()' and 'loadArticles()' to handle saving and loading 'Article'
+      objects respectively.
 
 
 
