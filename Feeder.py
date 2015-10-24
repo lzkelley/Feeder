@@ -2,7 +2,7 @@
 
 """
 
-from __future__ import unicode_literals
+
 
 from datetime import datetime
 import numpy as np
@@ -43,14 +43,14 @@ def main():
     # Print New Articles
     for ii, src in enumerate(sourceList.sources):
         src.getFeed()
-        print u"{0:3d} : {1}".format(ii, src.str())
+        print("{0:3d} : {1}".format(ii, src.str()))
 
         if( src.valid ):
             for jj,art in enumerate(src.articles):
-                print u"\t{0:3d} : {1}".format(jj, art.str())
+                print("\t{0:3d} : {1}".format(jj, art.str()))
 
         else:
-            print "\tINVALID"
+            print("\tINVALID")
 
 
     end = datetime.now()

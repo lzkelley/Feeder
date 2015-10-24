@@ -217,7 +217,7 @@ class SourceList(object):
 
         # Construct list of ``Source``s from raw data
         self.sources = []
-        for ii in xrange(numSrcs):
+        for ii in range(numSrcs):
             url = self._src_urls[ii]
             nam = self._src_names[ii]
             sub = self._src_subnames[ii]
@@ -394,7 +394,7 @@ class SourceList(object):
 
         # If interactive, show sources and confirm deletion
         if( inter ):
-            print "Delete the following sources: "
+            print("Delete the following sources: ")
             self.list(index)
             conf = zio.promptYesNo('Are you sure?')
             if( not conf ): return False
@@ -436,7 +436,7 @@ class SourceList(object):
         ids, srcs = self._get(index=index)
         # Print each source
         for id,src in zip(ids, srcs):
-            print "\t",self._str_src(id, src)
+            print("\t",self._str_src(id, src))
 
         return
 
@@ -792,9 +792,9 @@ def main():
     #  -------------------
     prompt = "\n\tAction?  [q]uit, [a]dd, [d]elete, [l]ist, [f]ind, [s]ave, [h]elp : "
     while( True ):
-        arg = raw_input(prompt)
+        arg = input(prompt)
         arg = arg.strip().lower()
-        print ""
+        print("")
         log.debug("arg = '%s'" % (arg))
         if(   arg.startswith('q') ):
             log.debug("Quitting interactive")
@@ -810,7 +810,7 @@ def main():
         elif( arg.startswith('s') ):
             _inter_save(sourceList, sets, log)
         elif( arg.startswith('h') ):
-            print '\n', main.__doc__
+            print('\n', main.__doc__)
         else:
             log.warning("Argument '%s' not understood!" % (arg))
             continue
@@ -841,7 +841,7 @@ def _inter_add(sourceList, log):
     # URL
     example = 'http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'
     while( True ):
-        url = raw_input("\tURL (e.g. '%s') : " % (example))
+        url = input("\tURL (e.g. '%s') : " % (example))
         url = url.strip()
         # Catch 'q'uit request
         if( url == 'q' ):
@@ -849,11 +849,11 @@ def _inter_add(sourceList, log):
             return
 
     # Title
-    titl = raw_input("\tTitle (e.g. 'NewYork Times'): ")
+    titl = input("\tTitle (e.g. 'NewYork Times'): ")
     titl = titl.strip()
 
     # Subtitle
-    subt = raw_input("\tSubtitle : (e.g. 'HomePage') : ")
+    subt = input("\tSubtitle : (e.g. 'HomePage') : ")
     subt = subt.strip()
 
     # Add New Source
@@ -873,7 +873,7 @@ def _inter_del(sourceList, log):
     import numbers
     log.debug("_inter_del()")
 
-    index = raw_input("\tIndex number: ").strip().lower()
+    index = input("\tIndex number: ").strip().lower()
     if( index.startswith('q') ):
         log.debug("Break")
         return
@@ -915,7 +915,7 @@ def _inter_save(sourceList, sets, log):
     if( savename is None ): savename = sets.file_sourcelist
 
     # Prompt for filename
-    args = raw_input("\tEnter save filename [default '%s'] : " % (savename)).strip()
+    args = input("\tEnter save filename [default '%s'] : " % (savename)).strip()
     if( len(args) > 0 ): savename = args
 
     retval = sourceList.save(fname=savename, inter=True)

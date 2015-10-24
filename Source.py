@@ -14,7 +14,7 @@ Methods
 
 """
 
-from __future__ import unicode_literals
+
 
 import feedparser, time, json, os
 from bs4 import BeautifulSoup
@@ -41,8 +41,8 @@ class Article(object):
             self.link = ent['link']
             self.summary = BeautifulSoup(ent['summary']).text
 
-            if( ent.has_key('updated_parsed') ): self.time_updated = ent['updated_parsed']
-            if( ent.has_key('published_parsed') ): self.time_published = ent['published_parsed']
+            if( 'updated_parsed' in ent ): self.time_updated = ent['updated_parsed']
+            if( 'published_parsed' in ent ): self.time_published = ent['published_parsed']
 
         except:
             self.title = None
@@ -70,7 +70,7 @@ class Article(object):
         """
         Note: DO NOT OVERRIDE `__str__` returning unicode!
         """
-        myStr = u"{0:{w0}.{w0}} - {1:{w1}.{w1}}"
+        myStr = "{0:{w0}.{w0}} - {1:{w1}.{w1}}"
         myStr = myStr.format(self.title, self.time_str, 
                              w0=Settings.STR_TITLE_LEN, w1=Settings.STR_TIME_LEN)
         return myStr
@@ -114,7 +114,7 @@ class Source(object):
         self.articles = []
         self.count = 0
         self.status = -1
-        self.title = u''
+        self.title = ''
 
         self.time = None
         self.feed_time = None
@@ -134,7 +134,7 @@ class Source(object):
 
         Note: DO NOT OVERRIDE `__str__` returning unicode!
         """
-        myStr = u"{0} - {1}"
+        myStr = "{0} - {1}"
         myStr = myStr.format(self.title, self.time_str)
         return myStr
 
@@ -199,26 +199,26 @@ class Source(object):
         """
         """
 
-        print "\nLOAD"
+        print("\nLOAD")
 
         if( fname is None ): fname = self._filename
 
         if( not os.path.exists(fname) ): 
             estr = "ERROR: file '%s' does not exist!" % (fname)
-            print estr
+            print(estr)
             return []
 
         try:
             data = json.load( open(fname, 'r') )
-            print "Loaded data from '%s'" % (fname)
+            print("Loaded data from '%s'" % (fname))
         except:
             estr = "ERROR: could not load json from '%s'" % (fname)
-            print estr
+            print(estr)
             return []
 
         ents = [ dict_to_ent(dic) for dic in data ]
         arts = [ Article(ee) for ee in ents ]
-        print "Loaded %d articles" % (len(arts))
+        print("Loaded %d articles" % (len(arts)))
 
         return arts
 
@@ -228,26 +228,26 @@ class Source(object):
         """
         """
 
-        print "\nSAVE"
+        print("\nSAVE")
 
         if( fname is None ): fname = self._filename
 
-        print "Filename = ", fname
+        print("Filename = ", fname)
         
         if( len(fname) == 0 ):
             estr = "Error: invalid filename '%s'" % (fname)
-            print estr
+            print(estr)
             return False
 
         
         arts = []
         if( os.path.exists(fname) ):
-            print "Path '%s' exists" % (fname)
+            print("Path '%s' exists" % (fname))
             arts += self.loadArticles(fname)
-            print "\tLoaded %d articles" % (len(arts))
+            print("\tLoaded %d articles" % (len(arts)))
 
         else:
-            print "Path '%s' does not exist" % (fname)
+            print("Path '%s' does not exist" % (fname))
         
 
         titles = [ aa.title for aa in arts ]
@@ -257,22 +257,22 @@ class Source(object):
                 arts.append(aa)
                 newArts += 1
 
-        print "Adding %d new articles" % (newArts)
+        print("Adding %d new articles" % (newArts))
 
         ## Convert articles to string dictionaries
-        print "Converting entries to dictionaries"
+        print("Converting entries to dictionaries")
         data = [ ent_to_dict(aa._ent) for aa in arts ]
         
-        print "Saving to '%s'" % (fname)
+        print("Saving to '%s'" % (fname))
         json.dump(data, open(fname, 'w'))
 
         if( not os.path.exists(fname) ):
             estr = "ERROR: did not save to '%s'" % (fname)
-            print estr
+            print(estr)
             return False
 
 
-        print "Saved"
+        print("Saved")
         self.saved = True
 
         return True
@@ -296,7 +296,7 @@ class Source(object):
         """
         times = [ art.time for art in self.articles if art.time is not None ]
         if( len(times) == 0 ):
-            print "WARNING: NO TIMES!  %s" % (self.url)
+            print("WARNING: NO TIMES!  %s" % (self.url))
         elif( len(times) == 1 ):
             return times[0]
         else:
@@ -361,7 +361,7 @@ def ent_to_dict(ent):
     dic = dict(ent)
 
     # Convert ``struct_time`` objects to strings
-    for key in dic.keys():
+    for key in list(dic.keys()):
         if( key.endswith('_parsed') ):
             struct_time = dic[key]
             strTime = "{:.3f}".format(time.mktime( dic[key] ))
@@ -380,7 +380,7 @@ def dict_to_ent(dic):
     ent = dict(dic)
 
     # String times to ``struct_time``
-    for key in ent.keys():
+    for key in list(ent.keys()):
         if( key.endswith('_parsed') ):
             fltTime = np.float(ent[key])
             struct_time = time.localtime(fltTime)
