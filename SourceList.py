@@ -97,18 +97,18 @@ class SourceList(object):
 
         """
         # Load settings (singleton)
-        if( sets is None ): sets = Settings.Settings()
+        if(sets is None): sets = Settings.Settings()
         self._log = MyLogger.defaultLogger(_LOG_FILENAME, log, sets)
         # Set default filename
-        if( fname is None ): fname = sets.file_sourcelist
+        if(fname is None): fname = sets.file_sourcelist
 
         loaded = False
 
         # Load data from save file
-        if( os.path.exists(fname) ):
+        if(os.path.exists(fname)):
             self._log.debug("Loading from '%s'" % (fname))
             retval = self.load(fname)
-            if( retval ):
+            if(retval):
                 self._log.debug(" - Loaded  v%s" % (str(self.version)))
                 self._log.debug(" - Sources: %d" % (self.count))
                 loaded = True
@@ -120,7 +120,7 @@ class SourceList(object):
 
 
         # Create new
-        if( not loaded ):
+        if(not loaded):
 
             # initialize values
             self._log.warning("Initializing new SourceList")
@@ -128,7 +128,7 @@ class SourceList(object):
             # save
             self._log.info("Saving")
             retval = self.save(fname=fname)
-            if( not retval ): self._log.error("Error, not saved!!")
+            if(not retval): self._log.error("Error, not saved!!")
 
         return
 
@@ -149,9 +149,9 @@ class SourceList(object):
         """
         self._log.debug("new()")
 
-        if( inter ):
+        if(inter):
             confirm = self._confirm_unsaved()
-            if( not confirm ): return False
+            if(not confirm): return False
 
         # Metadata
         self.version = Settings.__version__
@@ -184,10 +184,10 @@ class SourceList(object):
         #  -------------
 
         # Confirm lose unsaved changes
-        if( inter ):
+        if(inter):
             # Checks if there are unsaved changes, if so, prompts user
             confirm = self._confirm_unsaved()
-            if( not confirm ): return False
+            if(not confirm): return False
 
 
         # Load file as ``ConfigObj``
@@ -196,7 +196,7 @@ class SourceList(object):
 
         # Check version, update if needed
         config = self._checkVersion(config, fname, inter)
-        if( config is None ):
+        if(config is None):
             self._log.error("Version check on '%s' failed!" % (fname))
             return False
 
@@ -210,10 +210,10 @@ class SourceList(object):
 
         numSrcs = len(self._src_urls)
         filenames = config[SOURCELIST_KEYS.FILENAMES]
-        if( len(filenames) == numSrcs ): self._src_filenames = filenames
+        if(len(filenames) == numSrcs): self._src_filenames = filenames
         else:                            self._src_filenames = ['']*numSrcs
         updated = config[SOURCELIST_KEYS.UPDATED]
-        if( len(updated) == numSrcs ): self._src_updated = updated
+        if(len(updated) == numSrcs): self._src_updated = updated
         else:                          self._src_updated = [None]*numSrcs
 
         # Construct list of ``Source``s from raw data
@@ -261,8 +261,8 @@ class SourceList(object):
         retval = False
 
         # Use preset save filename if it exists
-        if( fname is None ):
-            if( self.savefile is not None ): fname = self.savefile
+        if(fname is None):
+            if(self.savefile is not None): fname = self.savefile
             else:
                 self._log.error("``savefile`` is not set, ``fname`` must be provided!")
                 return retval
@@ -271,11 +271,11 @@ class SourceList(object):
         # Update internal parameters based on list of sources
         self._clearSourceLists()
         for src in self.sources:
-            self._src_urls.append( src.url )
-            self._src_names.append( src.name )
-            self._src_subnames.append( src.subname )
-            self._src_filenames.append( src.filename )
-            self._src_updated.append( src.updated )
+            self._src_urls.append(src.url)
+            self._src_names.append(src.name)
+            self._src_subnames.append(src.subname)
+            self._src_filenames.append(src.filename)
+            self._src_updated.append(src.updated)
 
 
         # Setup data using ``ConfigObj``
@@ -293,13 +293,13 @@ class SourceList(object):
 
         # Make sure path exists, confirm overwrite in interactive mode
         zio.checkPath(fname)
-        if( os.path.exists(fname) and inter ):
+        if(os.path.exists(fname) and inter):
             conf = zio.promptYesNo("\tDestination '%s' already exists, overwrite?" % (fname))
-            if( not conf ): return False
+            if(not conf): return False
 
             # Create backup
             backname = self._backupFile(fname)
-            if( backname is None ):
+            if(backname is None):
                 self._log.error("Backup of '%s' failed!" % (fname))
                 return False
 
@@ -309,13 +309,13 @@ class SourceList(object):
         config.write()
 
         # Make sure its saved
-        if( os.path.exists(fname) ):
+        if(os.path.exists(fname)):
             retval = True
             self._recount()
             self._log.info("Saved %d sources to '%s'" % (self.count, fname))
             self.savefile = fname
             self._saved = True
-            if( not fname in self._savefile_list ):
+            if(not fname in self._savefile_list):
                 self._savefile_list.append(fname)
 
         else:
@@ -347,13 +347,13 @@ class SourceList(object):
         self._log.debug("add()")
 
         # Make sure url(s) is(are) iterable
-        if( isinstance(url, str) ): url = [ url ]
+        if(isinstance(url, str)): url = [url]
         # If no title/subtitle are provided, set to empty strings
-        if( title is None ): title = ['']*np.size(url)
-        if( subtitle is None ): subtitle = ['']*np.size(url)
+        if(title is None): title = ['']*np.size(url)
+        if(subtitle is None): subtitle = ['']*np.size(url)
 
         # Make sure all arrays are the same length
-        if( not self._same_size(url, title, subtitle) ):
+        if(not self._same_size(url, title, subtitle)):
             self._log.error("values to add are not the same length!")
             return False
 
@@ -361,12 +361,12 @@ class SourceList(object):
         retval = True
         for uu, tt, ss in zip(url, title, subtitle):
             # Check that url exists, skip if not
-            if( check and not zio.checkURL(uu) ):
+            if(check and not zio.checkURL(uu)):
                 self._log.warning("URL '%s' does not exist, skipping!" % (uu))
                 retval = False
                 continue
 
-            self.sources.append( Source(uu, tt, ss) )
+            self.sources.append(Source(uu, tt, ss))
 
 
         # update metadata
@@ -394,14 +394,14 @@ class SourceList(object):
         self._log.debug("delete()")
 
         # If interactive, show sources and confirm deletion
-        if( inter ):
+        if(inter):
             print("Delete the following sources: ")
             self.list(index)
             conf = zio.promptYesNo('Are you sure?')
-            if( not conf ): return False
+            if(not conf): return False
 
         # Make sure indices are iterable
-        if( not np.iterable(index) ): index = [index]
+        if(not np.iterable(index)): index = [index]
 
         # Iterate over IDs and delete
         #     MUST REVERSE ITERATE so that index numbers are preserved for subsequent entries.
@@ -450,7 +450,7 @@ class SourceList(object):
         self._log.debug("getFeeds()")
         numValid = 0
         for src in self.sources:
-            if( src.getFeed() ): numValid += 1
+            if(src.getFeed()): numValid += 1
 
         return
 
@@ -475,14 +475,14 @@ class SourceList(object):
         ## Convert index to a slicing object
         import numbers
         # Single integer number
-        if( isinstance(index, numbers.Integral) ):
+        if(isinstance(index, numbers.Integral)):
             ids = np.arange(index, index+1)
         # List of numbers
-        elif( np.iterable(index) ):
+        elif(np.iterable(index)):
             ids = np.array(index)
         # Otherwise, return all sources
         else:
-            if( index is not None ):
+            if(index is not None):
                 self._log.error("Unrecognized `index` = '%s'!" % (str(index)))
                 self._log.warning("Returning all entries")
 
@@ -490,7 +490,7 @@ class SourceList(object):
 
 
         ## Select target elements and return
-        srcs = [ self.sources[ii] for ii in ids ]
+        srcs = [self.sources[ii] for ii in ids]
 
         return ids, srcs
 
@@ -519,7 +519,7 @@ class SourceList(object):
 
         vers = config[SOURCELIST_KEYS.VERS]
         # If version is up-to-date, return config object
-        if( vers == Settings.__version__ ):
+        if(vers == Settings.__version__):
             self._log.debug("Version is uptodate at v'%s'" % (Settings.__version__))
             return config
 
@@ -529,14 +529,14 @@ class SourceList(object):
         msg = msg.format(fname, vers, Settings.__version__)
         estr = msg + ", cannot load!"
         # If not interactive, return ``None``
-        if( not inter ):
+        if(not inter):
             self._log.warning(msg)
             self._log.warning("Updating to new version!")
         # If interactive, prompt user to update file
         else:
             msg += "; update to load?"
             conf = zio.promptYesNo("\t" + msg, default='y')
-            if( not conf ):
+            if(not conf):
                 self._log.error(estr)
                 return None
 
@@ -547,7 +547,7 @@ class SourceList(object):
         # Create a backup of the file, and delete original
         self._log.debug("Creating backup")
         backname = self._backupFile(fname, True, prepend='', append='_v%s' % (vers))
-        if( backname is None ):
+        if(backname is None):
             self._log.debug("Backup failed!")
             return None
         else:
@@ -561,7 +561,7 @@ class SourceList(object):
         vers = config[SOURCELIST_KEYS.VERS]
         self._log.info("Saving new version v'%s' to '%s'" % (vers, fname))
         config.write()
-        if( not os.path.exists(fname) ):
+        if(not os.path.exists(fname)):
             self._log.error("Filename '%s' does not exist!  Save failed!!" % (fname))
             return None
 
@@ -590,7 +590,7 @@ class SourceList(object):
         backname = zio.modifyFilename(fname, append=append, prepend=prepend)
 
         # If backup already exists, delete
-        if( os.path.exists(backname) ):
+        if(os.path.exists(backname)):
             self._log.info("Backup '%s' already exists.  Deleting." % (backname))
             os.remove(backname)
 
@@ -599,13 +599,13 @@ class SourceList(object):
         shutil.copy2(fname, backname)
 
         # Make sure backup created
-        if( not os.path.exists(backname) ):
+        if(not os.path.exists(backname)):
             self._log.error("Backup '%s' does not exist!" % (backname))
             return None
 
 
         # Delete old file if desired
-        if( delold ):
+        if(delold):
             self._log.info("Deleting '%s'" % (fname))
             os.remove(fname)
 
@@ -633,7 +633,7 @@ class SourceList(object):
         sub = src.subname
 
         tstr = tit
-        if( len(sub) > 0 ): tstr += " - " + sub
+        if(len(sub) > 0): tstr += " - " + sub
 
         pstr = "{0:>4d} : {1:{twid}.{twid}}   {2:{uwid}.{uwid}s}"
         pstr = pstr.format(id, tstr, url, twid=40, uwid=60)
@@ -650,8 +650,8 @@ class SourceList(object):
             retval <bool> : `True` on positive confirmation.
 
         """
-        if( hasattr(self, '_saved') ):
-            if( not self._saved ):
+        if(hasattr(self, '_saved')):
+            if(not self._saved):
                 return zio.promptYesNo('This will overwrite unsaved data, are you sure?')
 
         return True
@@ -671,10 +671,10 @@ class SourceList(object):
         """
 
         self._log.debug("_recount()")
-        uselists = [ self._src_urls, self._src_names, self._src_subnames, self.sources ]
+        uselists = [self._src_urls, self._src_names, self._src_subnames, self.sources]
 
         count = np.size(self._src_urls)
-        if( self._same_size(*uselists) ): self._log.debug("All lists have length %d" % (count))
+        if(self._same_size(*uselists)): self._log.debug("All lists have length %d" % (count))
         else:
             self._log.error("Sources list lengths do not match!")
             return False
@@ -696,8 +696,8 @@ class SourceList(object):
             retval <bool> : `True` if all are same length
 
         """
-        counts = [ np.size(ar) for ar in arrs ]
-        if( len(set(counts)) == 1 ): return True
+        counts = [np.size(ar) for ar in arrs]
+        if(len(set(counts)) == 1): return True
         return False
 
 
@@ -720,7 +720,7 @@ class SourceList(object):
         self._log.debug("_updateSave()")
         vers = old[SOURCELIST_KEYS.VERS]
 
-        if( vers.startswith('0.1') ):
+        if(vers.startswith('0.1')):
             new = self._V0_1__to__V0_2(old)
 
         else:
@@ -743,8 +743,8 @@ class SourceList(object):
         new[SOURCELIST_KEYS.NAMES] = old[_KEYS__V0_1.SOURCES_TITLE]
         new[SOURCELIST_KEYS.SUBNAMES] = old[_KEYS__V0_1.SOURCES_SUBTITLE]
         new[SOURCELIST_KEYS.SAVE_LIST] = old[_KEYS__V0_1.SAVE_LIST]
-        new[SOURCELIST_KEYS.FILENAMES] = [ ]
-        new[SOURCELIST_KEYS.UPDATED] = [ ]
+        new[SOURCELIST_KEYS.FILENAMES] = []
+        new[SOURCELIST_KEYS.UPDATED] = []
 
         return new
 
@@ -792,25 +792,25 @@ def main():
     ## Interactive Routine
     #  -------------------
     prompt = "\n\tAction?  [q]uit, [a]dd, [d]elete, [l]ist, [f]ind, [s]ave, [h]elp : "
-    while( True ):
+    while(True):
         arg = input(prompt)
         arg = arg.strip().lower()
         print("")
         log.debug("arg = '%s'" % (arg))
-        if(   arg.startswith('q') ):
+        if(arg.startswith('q')):
             log.debug("Quitting interactive")
             break
-        elif( arg.startswith('a') ):
+        elif(arg.startswith('a')):
             _inter_add(sourceList, log)
-        elif( arg.startswith('d') ):
+        elif(arg.startswith('d')):
             _inter_del(sourceList, log)
-        elif( arg.startswith('l') ):
+        elif(arg.startswith('l')):
             sourceList.list()
-        elif( arg.startswith('f') ):
+        elif(arg.startswith('f')):
             _inter_find(sourceList, log)
-        elif( arg.startswith('s') ):
+        elif(arg.startswith('s')):
             _inter_save(sourceList, sets, log)
-        elif( arg.startswith('h') ):
+        elif(arg.startswith('h')):
             print('\n', main.__doc__)
         else:
             log.warning("Argument '%s' not understood!" % (arg))
@@ -841,11 +841,11 @@ def _inter_add(sourceList, log):
 
     # URL
     example = 'http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'
-    while( True ):
+    while(True):
         url = input("\tURL (e.g. '%s') : " % (example))
         url = url.strip()
         # Catch 'q'uit request
-        if( url == 'q' ):
+        if(url == 'q'):
             log.debug("Break '%s'" % (url))
             return
 
@@ -859,7 +859,7 @@ def _inter_add(sourceList, log):
 
     # Add New Source
     retval = sourceList.add(url, title=titl, subtitle=subt, check=True)
-    if( retval ): log.info("Added entry for '%s'" % (url))
+    if(retval): log.info("Added entry for '%s'" % (url))
     else: log.error("Could not add entry for '%s'!" % (url))
 
     return
@@ -875,7 +875,7 @@ def _inter_del(sourceList, log):
     log.debug("_inter_del()")
 
     index = input("\tIndex number: ").strip().lower()
-    if( index.startswith('q') ):
+    if(index.startswith('q')):
         log.debug("Break")
         return
 
@@ -886,7 +886,7 @@ def _inter_del(sourceList, log):
         return
 
     retval = sourceList.delete(index, inter=True)
-    if( retval ): log.info("Deleted entry '%d'" % (index))
+    if(retval): log.info("Deleted entry '%d'" % (index))
     else: log.error("Could not delete entry '%d'!" % (index))
 
     return
@@ -913,14 +913,14 @@ def _inter_save(sourceList, sets, log):
 
     # Set default save filename
     savename = sourceList.savefile
-    if( savename is None ): savename = sets.file_sourcelist
+    if(savename is None): savename = sets.file_sourcelist
 
     # Prompt for filename
     args = input("\tEnter save filename [default '%s'] : " % (savename)).strip()
-    if( len(args) > 0 ): savename = args
+    if(len(args) > 0): savename = args
 
     retval = sourceList.save(fname=savename, inter=True)
-    if( retval ): log.info("Saved to '%s'" % (savename))
+    if(retval): log.info("Saved to '%s'" % (savename))
     else: log.error("Could not save to '%s'!" % (savename))
 
     return
@@ -938,4 +938,4 @@ class _KEYS__V0_1(object):
 
 
 
-if( __name__ == "__main__" ): main()
+if(__name__ == "__main__"): main()

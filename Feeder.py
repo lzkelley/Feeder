@@ -44,7 +44,7 @@ def main():
         src.getFeed()
         print("{0:3d} : {1}".format(ii, src.str()))
 
-        if( src.valid ):
+        if(src.valid):
             for jj,art in enumerate(src.articles):
                 print("\t{0:3d} : {1}".format(jj, art.str()))
 
@@ -77,4 +77,4 @@ def loadSources(sourceList, log):
 # } loadSources()
 
 
-if( __name__ == "__main__"): main()
+if(__name__ == "__main__"): main()

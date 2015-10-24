@@ -40,8 +40,8 @@ class Article(object):
             self.link = ent['link']
             self.summary = BeautifulSoup(ent['summary']).text
 
-            if( 'updated_parsed' in ent ): self.time_updated = ent['updated_parsed']
-            if( 'published_parsed' in ent ): self.time_published = ent['published_parsed']
+            if('updated_parsed' in ent): self.time_updated = ent['updated_parsed']
+            if('published_parsed' in ent): self.time_published = ent['published_parsed']
 
         except:
             self.title = None
@@ -50,16 +50,16 @@ class Article(object):
             return
 
 
-        if( self.time_updated is not None ):
+        if(self.time_updated is not None):
             self.time_updated_str = time.asctime(self.time_updated)
 
-        if( self.time_published is not None ):
+        if(self.time_published is not None):
             self.time_published_str = time.asctime(self.time_published)
 
-        if( self.time_updated is not None ): self.time = self.time_updated
-        elif( self.time_published is not None ): self.time = self.time_published
+        if(self.time_updated is not None): self.time = self.time_updated
+        elif(self.time_published is not None): self.time = self.time_published
 
-        if( self.time is not None ): self.time_str = time.asctime(self.time)
+        if(self.time is not None): self.time_str = time.asctime(self.time)
 
         self.valid = True
         return
@@ -76,7 +76,7 @@ class Article(object):
 
 
     def _hasGet(self, ent, key):
-        if( hasattr(ent, key) ): return getattr(ent, key)
+        if(hasattr(ent, key)): return getattr(ent, key)
         else: return None
 
 
@@ -105,7 +105,7 @@ class Source(object):
         self.subname = subname
 
         ## Set filename, construct if needed
-        if( len(filename) > 0 ): self._filename = filename
+        if(len(filename) > 0): self._filename = filename
         else:                    self._filename = self._getFilename()
         self.file_time = filetime
 
@@ -159,31 +159,31 @@ class Source(object):
 
         # Check if source feed seems valid
         self.valid = False # Make sure this is False by default
-        if( self.status != 200 or not hasattr(feed, 'feed') or not hasattr(feed.feed, 'title') ):
+        if(self.status != 200 or not hasattr(feed, 'feed') or not hasattr(feed.feed, 'title')):
             return False
 
         # Set basic parameters (if available)
         self.title = feed.feed.title
         #     Look for something describing time this feed was updated
         self.feed_time = self._hasGet(feed, 'updated_parsed')
-        if( self.feed_time is None ): self.feed_time = self._hasGet(feed, 'published_parsed')
+        if(self.feed_time is None): self.feed_time = self._hasGet(feed, 'published_parsed')
 
         # Look for 'entries', use them to create ``Articles``
-        if( hasattr(feed, 'entries') ):
+        if(hasattr(feed, 'entries')):
             for ent in feed.entries:
                 art = Article(ent)
-                if( art.valid ): self.articles.append(art)
+                if(art.valid): self.articles.append(art)
 
             self.count = len(self.articles)
 
         # If no valid articls found, return False
-        if( self.count == 0 ): return False
+        if(self.count == 0): return False
 
         # Find most recent time from articles
         self.article_time = self._mostRecent()
 
         # Set ``.time`` as the most reliable measure of updated time
-        if( self.feed_time is not None ): self.time = self.feed_time
+        if(self.feed_time is not None): self.time = self.feed_time
         else:                             self.time = self.article_time
 
         # Update string times
@@ -200,23 +200,23 @@ class Source(object):
 
         print("\nLOAD")
 
-        if( fname is None ): fname = self._filename
+        if(fname is None): fname = self._filename
 
-        if( not os.path.exists(fname) ):
+        if(not os.path.exists(fname)):
             estr = "ERROR: file '%s' does not exist!" % (fname)
             print(estr)
             return []
 
         try:
-            data = json.load( open(fname, 'r') )
+            data = json.load(open(fname, 'r'))
             print("Loaded data from '%s'" % (fname))
         except:
             estr = "ERROR: could not load json from '%s'" % (fname)
             print(estr)
             return []
 
-        ents = [ dict_to_ent(dic) for dic in data ]
-        arts = [ Article(ee) for ee in ents ]
+        ents = [dict_to_ent(dic) for dic in data]
+        arts = [Article(ee) for ee in ents]
         print("Loaded %d articles" % (len(arts)))
 
         return arts
@@ -229,18 +229,18 @@ class Source(object):
 
         print("\nSAVE")
 
-        if( fname is None ): fname = self._filename
+        if(fname is None): fname = self._filename
 
         print("Filename = ", fname)
 
-        if( len(fname) == 0 ):
+        if(len(fname) == 0):
             estr = "Error: invalid filename '%s'" % (fname)
             print(estr)
             return False
 
 
         arts = []
-        if( os.path.exists(fname) ):
+        if(os.path.exists(fname)):
             print("Path '%s' exists" % (fname))
             arts += self.loadArticles(fname)
             print("\tLoaded %d articles" % (len(arts)))
@@ -249,10 +249,10 @@ class Source(object):
             print("Path '%s' does not exist" % (fname))
 
 
-        titles = [ aa.title for aa in arts ]
+        titles = [aa.title for aa in arts]
         newArts = 0
         for aa in self.articles:
-            if( aa.title not in titles ):
+            if(aa.title not in titles):
                 arts.append(aa)
                 newArts += 1
 
@@ -260,12 +260,12 @@ class Source(object):
 
         ## Convert articles to string dictionaries
         print("Converting entries to dictionaries")
-        data = [ ent_to_dict(aa._ent) for aa in arts ]
+        data = [ent_to_dict(aa._ent) for aa in arts]
 
         print("Saving to '%s'" % (fname))
         json.dump(data, open(fname, 'w'))
 
-        if( not os.path.exists(fname) ):
+        if(not os.path.exists(fname)):
             estr = "ERROR: did not save to '%s'" % (fname)
             print(estr)
             return False
@@ -283,9 +283,9 @@ class Source(object):
         Store string representations of different time attributes.
         """
         self.time_str = time.asctime(self.time)
-        if( self.feed_time is not None ): self.feed_time_str = time.asctime(self.feed_time)
-        if( self.article_time is not None ): self.article_time_str = time.asctime(self.article_time)
-        if( self.file_time is not None ): self.file_time_str = time.asctime(self.file_time)
+        if(self.feed_time is not None): self.feed_time_str = time.asctime(self.feed_time)
+        if(self.article_time is not None): self.article_time_str = time.asctime(self.article_time)
+        if(self.file_time is not None): self.file_time_str = time.asctime(self.file_time)
         return
 
 
@@ -293,16 +293,16 @@ class Source(object):
         """
         Find time of the most recent article.
         """
-        times = [ art.time for art in self.articles if art.time is not None ]
-        if( len(times) == 0 ):
+        times = [art.time for art in self.articles if art.time is not None]
+        if(len(times) == 0):
             print("WARNING: NO TIMES!  %s" % (self.url))
-        elif( len(times) == 1 ):
+        elif(len(times) == 1):
             return times[0]
         else:
 
             recent = times[0]
             for tt in times[1:]:
-                if( tt > recent ): recent = tt
+                if(tt > recent): recent = tt
 
         return recent
 
@@ -312,9 +312,9 @@ class Source(object):
         Check for attribute ``key`` in given feed or feed.feed.  Return ``None`` if neither.
         """
 
-        if( hasattr(feed, key) ):
+        if(hasattr(feed, key)):
             return getattr(feed, key)
-        elif( hasattr(feed.feed, key) ):
+        elif(hasattr(feed.feed, key)):
             return getattr(feed.feed, key)
 
         return None
@@ -339,12 +339,12 @@ class Source(object):
         # Construct candidate filename from ``name`` and ``subname``
         fname = self.name.strip() + '_' + self.subname.strip()
         # If candidate is not long enough, append cleaned-``url`` string
-        if( len(fname) <= Settings.FILENAME_MIN_LEN ):
+        if(len(fname) <= Settings.FILENAME_MIN_LEN):
             urlStr = self.url.strip().replace('http://','').replace('www.','').split('/')[0]
             fname += '__' + urlStr
 
         # Remove everything but underscore ('_') and alphanumeric characters
-        fname = ''.join(ch for ch in fname if (ch.isalnum() or ch == '_') )
+        fname = ''.join(ch for ch in fname if (ch.isalnum() or ch == '_'))
 
         fname = Settings.Settings().dir_data + fname + Settings.SOURCE_FILE_TYPE
 
@@ -361,9 +361,9 @@ def ent_to_dict(ent):
 
     # Convert ``struct_time`` objects to strings
     for key in list(dic.keys()):
-        if( key.endswith('_parsed') ):
+        if(key.endswith('_parsed')):
             struct_time = dic[key]
-            strTime = "{:.3f}".format(time.mktime( dic[key] ))
+            strTime = "{:.3f}".format(time.mktime(dic[key]))
             dic[key] = strTime
 
 
@@ -380,7 +380,7 @@ def dict_to_ent(dic):
 
     # String times to ``struct_time``
     for key in list(ent.keys()):
-        if( key.endswith('_parsed') ):
+        if(key.endswith('_parsed')):
             fltTime = np.float(ent[key])
             struct_time = time.localtime(fltTime)
             ent[key] = struct_time

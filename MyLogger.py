@@ -13,13 +13,13 @@ Functions
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import logging, inspect, os
+import logging
+import inspect
 import numpy as np
 
 import zcode.inout as zio
 
 import Settings
-
 
 
 class IndentFormatter(logging.Formatter):
@@ -33,7 +33,7 @@ class IndentFormatter(logging.Formatter):
 
     def format(self, rec):
         stack = inspect.stack()
-        if( self.baseline is None ): self.baseline = len(stack)
+        if(self.baseline is None): self.baseline = len(stack)
         indent = (len(stack)-self.baseline)
         addSpace = ((indent > 0) & (not rec.msg.startswith(" -")))
         rec.indent = ' -'*indent + ' '*addSpace
@@ -68,7 +68,7 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
 
     """
 
-    if( tofile is None and not tostr ): raise RuntimeError("Must log to something")
+    if(tofile is None and not tostr): raise RuntimeError("Must log to something")
 
     logger = logging.getLogger(name)
     # Make sure handlers don't get duplicated (ipython issue)
@@ -77,21 +77,21 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
     logger.propagate = 0
 
     ## Determine and Set Logging Level
-    if( fileLevel is None ): fileLevel = logging.DEBUG
-    if( strLevel  is None ): strLevel  = logging.WARNING
+    if(fileLevel is None): fileLevel = logging.DEBUG
+    if(strLevel  is None): strLevel  = logging.WARNING
     # Logger object must be at minimum level; only accepts `int`
     useLevel = int(np.min([fileLevel, strLevel]))
     logger.setLevel(useLevel)
 
-    if( dateFmt is None ): dateFmt = '%Y/%m/%d %H:%M:%S'
+    if(dateFmt is None): dateFmt = '%Y/%m/%d %H:%M:%S'
 
     ## Log to file
     #  -----------
-    if( tofile is not None ):
+    if(tofile is not None):
         zio.checkPath(tofile)
 
         # Create default formatting for file output
-        if( fileFmt is None ):
+        if(fileFmt is None):
             fileFmt  = "%(asctime)s %(levelname)8.8s [%(filename)20.20s:"
             fileFmt += "%(funcName)-20.20s]%(indent)s%(message)s"
 
@@ -104,9 +104,9 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
 
     ## Log To stdout
     #  -------------
-    if( tostr ):
+    if(tostr):
         # Create default formatting for stream output
-        if( strFmt is None ):
+        if(strFmt is None):
             strFmt = "%(indent)s%(message)s"
 
         strFormatter = IndentFormatter(strFmt, datefmt=dateFmt)
@@ -137,13 +137,13 @@ def defaultLogger(fname, log=None, sets=None):
 
     """
 
-    if( isinstance(log, logging.Logger) ): return log
-    if( sets is None ): sets = Settings.Settings()
+    if(isinstance(log, logging.Logger)): return log
+    if(sets is None): sets = Settings.Settings()
 
     filename = sets.dir_log + fname
 
-    if(   sets.debug   ): level = logging.DEBUG
-    elif( sets.verbose ): level = logging.INFO
+    if(sets.debug): level = logging.DEBUG
+    elif(sets.verbose): level = logging.INFO
     else:                 level = logging.WARNING
 
     log = _getLogger(None, tostr=True, tofile=filename, strLevel=level, fileLevel=logging.DEBUG)
