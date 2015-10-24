@@ -8,13 +8,12 @@ Objects
 
 Methods
 -------
-    ent_to_dict : 
-    dict_to_ent : 
+    ent_to_dict :
+    dict_to_ent :
 
 
 """
-
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import feedparser, time, json, os
 from bs4 import BeautifulSoup
@@ -24,7 +23,7 @@ import MyLogger, Settings
 
 
 class Article(object):
-    
+
     def __init__(self, ent):
         self._ent = ent
         self.valid = False
@@ -51,10 +50,10 @@ class Article(object):
             return
 
 
-        if( self.time_updated is not None ): 
+        if( self.time_updated is not None ):
             self.time_updated_str = time.asctime(self.time_updated)
 
-        if( self.time_published is not None ): 
+        if( self.time_published is not None ):
             self.time_published_str = time.asctime(self.time_published)
 
         if( self.time_updated is not None ): self.time = self.time_updated
@@ -71,7 +70,7 @@ class Article(object):
         Note: DO NOT OVERRIDE `__str__` returning unicode!
         """
         myStr = "{0:{w0}.{w0}} - {1:{w1}.{w1}}"
-        myStr = myStr.format(self.title, self.time_str, 
+        myStr = myStr.format(self.title, self.time_str,
                              w0=Settings.STR_TITLE_LEN, w1=Settings.STR_TIME_LEN)
         return myStr
 
@@ -125,9 +124,9 @@ class Source(object):
         self.file_time_str = ''
 
         return
-      
 
-    
+
+
     def str(self):
         """
         Construct a string description of this object using its title and time.
@@ -152,7 +151,7 @@ class Source(object):
             retval <bool> : `True` on success, `False` otherwise
 
         """
-        
+
         # Get Parsed Feed
         feed = feedparser.parse(self.url)
         self._feed = feed
@@ -160,7 +159,7 @@ class Source(object):
 
         # Check if source feed seems valid
         self.valid = False # Make sure this is False by default
-        if( self.status != 200 or not hasattr(feed, 'feed') or not hasattr(feed.feed, 'title') ): 
+        if( self.status != 200 or not hasattr(feed, 'feed') or not hasattr(feed.feed, 'title') ):
             return False
 
         # Set basic parameters (if available)
@@ -203,7 +202,7 @@ class Source(object):
 
         if( fname is None ): fname = self._filename
 
-        if( not os.path.exists(fname) ): 
+        if( not os.path.exists(fname) ):
             estr = "ERROR: file '%s' does not exist!" % (fname)
             print(estr)
             return []
@@ -233,13 +232,13 @@ class Source(object):
         if( fname is None ): fname = self._filename
 
         print("Filename = ", fname)
-        
+
         if( len(fname) == 0 ):
             estr = "Error: invalid filename '%s'" % (fname)
             print(estr)
             return False
 
-        
+
         arts = []
         if( os.path.exists(fname) ):
             print("Path '%s' exists" % (fname))
@@ -248,12 +247,12 @@ class Source(object):
 
         else:
             print("Path '%s' does not exist" % (fname))
-        
+
 
         titles = [ aa.title for aa in arts ]
         newArts = 0
         for aa in self.articles:
-            if( aa.title not in titles ): 
+            if( aa.title not in titles ):
                 arts.append(aa)
                 newArts += 1
 
@@ -262,7 +261,7 @@ class Source(object):
         ## Convert articles to string dictionaries
         print("Converting entries to dictionaries")
         data = [ ent_to_dict(aa._ent) for aa in arts ]
-        
+
         print("Saving to '%s'" % (fname))
         json.dump(data, open(fname, 'w'))
 
@@ -278,7 +277,7 @@ class Source(object):
         return True
 
 
-    
+
     def _strTimes(self):
         """
         Store string representations of different time attributes.
@@ -319,7 +318,7 @@ class Source(object):
             return getattr(feed.feed, key)
 
         return None
-    
+
 
     def _getFilename(self):
         """
@@ -327,7 +326,7 @@ class Source(object):
 
         Notes:
             `name`_`subname`[__`url`]
-            If the combination of ``name`` and ``subname`` are not long enough (compared to 
+            If the combination of ``name`` and ``subname`` are not long enough (compared to
             ``Settings.FILENAME_MIN_LEN``), then a trimmed version of the URL is appended.
             The only preserved characters are alpha-numeric and underscore ('_').
 
@@ -340,7 +339,7 @@ class Source(object):
         # Construct candidate filename from ``name`` and ``subname``
         fname = self.name.strip() + '_' + self.subname.strip()
         # If candidate is not long enough, append cleaned-``url`` string
-        if( len(fname) <= Settings.FILENAME_MIN_LEN ): 
+        if( len(fname) <= Settings.FILENAME_MIN_LEN ):
             urlStr = self.url.strip().replace('http://','').replace('www.','').split('/')[0]
             fname += '__' + urlStr
 
@@ -367,7 +366,7 @@ def ent_to_dict(ent):
             strTime = "{:.3f}".format(time.mktime( dic[key] ))
             dic[key] = strTime
 
-    
+
     return dic
 
 
@@ -387,4 +386,3 @@ def dict_to_ent(dic):
             ent[key] = struct_time
 
     return ent
-    

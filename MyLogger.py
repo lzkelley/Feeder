@@ -11,11 +11,12 @@ Functions
     defaultLogger : Create a basic ``logging.Logger`` object, logging to stream and file.
 
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging, inspect, os
 import numpy as np
 
-import zcode.InOut as zio
+import zcode.inout as zio
 
 import Settings
 
@@ -78,8 +79,9 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
     ## Determine and Set Logging Level
     if( fileLevel is None ): fileLevel = logging.DEBUG
     if( strLevel  is None ): strLevel  = logging.WARNING
-    # Logger object must be at minimum level
-    logger.setLevel(np.min([fileLevel, strLevel]))
+    # Logger object must be at minimum level; only accepts `int`
+    useLevel = int(np.min([fileLevel, strLevel]))
+    logger.setLevel(useLevel)
 
     if( dateFmt is None ): dateFmt = '%Y/%m/%d %H:%M:%S'
 
@@ -122,7 +124,7 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
 def defaultLogger(fname, log=None, sets=None):
     """
     Create a basic ``logging.Logger`` object, logging to stream and file.
-    
+
     Arguments
     ---------
         log  <obj>  : a ``logging`` level (integer), or `None` for default
@@ -149,5 +151,3 @@ def defaultLogger(fname, log=None, sets=None):
     return log
 
 # defaultLogger()
-
-

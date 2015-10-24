@@ -16,14 +16,14 @@ Objects
 -------
     SOURCELIST_KEYS
     SourceList
-    
+
 
 Functions
 ---------
     main         : Run interactive mode where the user passes options via CLI.
     _inter_add   : Interactively add a new ``SourceList`` entry.
     _inter_del   : Interactively delete a ``SourceList`` entry.
-    _inter_find  : 
+    _inter_find  :
     _inter_save  : Save current ``SourceList`` to file.
 
 
@@ -37,6 +37,7 @@ To-Do
 
 
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os, shutil, sys
 from configobj import ConfigObj
@@ -44,7 +45,7 @@ from enum import Enum
 from datetime import datetime
 import numpy as np
 
-import zcode.InOut as zio
+import zcode.inout as zio
 
 import MyLogger, Settings, Source
 
@@ -232,7 +233,7 @@ class SourceList(object):
         self.savefile = fname
         self._recount()
         self._saved = True
-            
+
         return True
 
 
@@ -243,7 +244,7 @@ class SourceList(object):
 
         In interactive mode (``inter`` == 'True'), prompts user if overwriting existing savefile.
         If overwriting, backup file is created.
-        
+
         Arguments
         ---------
             fname <str>  : filename to save to
@@ -330,7 +331,7 @@ class SourceList(object):
         Add one or multiple entries to sources.
 
         If ``title`` and/or ``subtitle`` are provided, they must match length of ``url``.
-        
+
         Arguments
         ---------
             url      <str>([N])  : URL of new entry/entries.
@@ -379,7 +380,7 @@ class SourceList(object):
     def delete(self, index, inter=True):
         """
         Remove one or multiple entries from sources.
-        
+
         Arguments
         ---------
             index <int>([N]) : index or indices to delete.
@@ -467,17 +468,17 @@ class SourceList(object):
         -------
             ids  <int>([N])   : returned index numbers.
             srcs <str>[(N),3] : sources, each is {url, title, subtitle}
-        
+
         """
         self._log.debug("_get()")
 
         ## Convert index to a slicing object
         import numbers
         # Single integer number
-        if( isinstance(index, numbers.Integral) ): 
+        if( isinstance(index, numbers.Integral) ):
             ids = np.arange(index, index+1)
         # List of numbers
-        elif( np.iterable(index) ): 
+        elif( np.iterable(index) ):
             ids = np.array(index)
         # Otherwise, return all sources
         else:
@@ -501,7 +502,7 @@ class SourceList(object):
 
         If the file is not up-to-date, it is updated.  A backup file is created by appending the
         old version number to the previous filename (``fname``; e.g. './data/sources_v0.1.conf').
-        
+
         Arguments
         ---------
             config <obj>  : config data dictionary loaded from save file
@@ -511,7 +512,7 @@ class SourceList(object):
         Returns
         -------
             retval <obj> : ``config`` dictionary on success, ``None`` on failure
-        
+
         """
 
         self._log.debug("_checkVersion()")
@@ -526,7 +527,7 @@ class SourceList(object):
         # Prompt to update file
         msg = "File '{}' version is v'{}' not current v'{}'"
         msg = msg.format(fname, vers, Settings.__version__)
-        estr = msg + ", cannot load!"                
+        estr = msg + ", cannot load!"
         # If not interactive, return ``None``
         if( not inter ):
             self._log.warning(msg)
@@ -535,14 +536,14 @@ class SourceList(object):
         else:
             msg += "; update to load?"
             conf = zio.promptYesNo("\t" + msg, default='y')
-            if( not conf ): 
+            if( not conf ):
                 self._log.error(estr)
                 return None
 
 
         ## Update file
         #  -----------
-        
+
         # Create a backup of the file, and delete original
         self._log.debug("Creating backup")
         backname = self._backupFile(fname, True, prepend='', append='_v%s' % (vers))
@@ -571,7 +572,7 @@ class SourceList(object):
     def _backupFile(self, fname, delold, append='', prepend='.back_'):
         """
         Create a backup of the given file.
-        
+
         Arguments
         ---------
             fname <str>   : filename to backup
@@ -602,7 +603,7 @@ class SourceList(object):
             self._log.error("Backup '%s' does not exist!" % (backname))
             return None
 
-        
+
         # Delete old file if desired
         if( delold ):
             self._log.info("Deleting '%s'" % (fname))
@@ -643,7 +644,7 @@ class SourceList(object):
     def _confirm_unsaved(self):
         """
         If there is unsaved data, Prompt user (via CLI) to confirm overwrite.
-        
+
         Returns
         -------
             retval <bool> : `True` on positive confirmation.

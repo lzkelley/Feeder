@@ -13,6 +13,7 @@ Methods
 
 
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 
@@ -41,7 +42,7 @@ class Settings(object):
     def __init__(self):
         """
         """
-        
+
         ## Basic Parameters
         #  ----------------
         self.verbose = True
@@ -51,7 +52,7 @@ class Settings(object):
         #  ---------------------
         self.dir_log = "./log/"
         self.dir_data = "./data/"
-        
+
         self.file_sourcelist = self.dir_data + "sourcelist.conf"
 
         ## Internal Parameters
@@ -72,15 +73,15 @@ def getParser(sets):
 
     ## Create Arguments
     #  ----------------
-    parser.add_argument("-v", "--verbose", 
+    parser.add_argument("-v", "--verbose",
                         action="store_true", dest="verbose", default=sets.verbose,
                         help="print verbose output to log")
 
-    parser.add_argument("-d", "--debug", 
+    parser.add_argument("-d", "--debug",
                         action="store_true", dest="debug", default=sets.debug,
                         help="print highly verbose output to log")
 
-    parser.add_argument("-s", "--sourcelist", 
+    parser.add_argument("-s", "--sourcelist",
                         dest="SRC_FILE", default=sets.file_sourcelist,
                         help="sourcelist file.")
 
@@ -105,4 +106,3 @@ def getArgs(parser, sets):
     return args, sets
 
 # } getArgs()
-
