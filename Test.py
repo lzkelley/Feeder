@@ -15,4 +15,3 @@ print("LOADING")
 arts = src.loadArticles()
 for aa in arts:
     print(aa.str())
-

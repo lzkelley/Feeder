@@ -1,5 +1,4 @@
-"""
-Logging objects and routines.
+"""Logging objects and routines.
 
 Objects
 -------
@@ -23,8 +22,7 @@ import Settings
 
 
 class IndentFormatter(logging.Formatter):
-    """
-    Custom ``logging`` Formatter to add indentation based on stack level.
+    """Custom ``logging`` Formatter to add indentation based on stack level.
     """
 
     def __init__(self, fmt=None, datefmt=None):
@@ -41,14 +39,10 @@ class IndentFormatter(logging.Formatter):
         del rec.indent
         return out
 
-# } class IndentFormatter
-
-
 
 def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fileLevel=None,
-              tofile=None, tostr=True):
-    """
-    Create a standard logger object which logs to file and or stdout stream ('str')
+               tofile=None, tostr=True):
+    """Create a standard logger object which logs to file and or stdout stream ('str')
 
     Arguments
     ---------
@@ -76,17 +70,17 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
     # Prevents duplication or something something...
     logger.propagate = 0
 
-    ## Determine and Set Logging Level
+    # Determine and Set Logging Level
     if(fileLevel is None): fileLevel = logging.DEBUG
-    if(strLevel  is None): strLevel  = logging.WARNING
+    if(strLevel is None): strLevel  = logging.WARNING
     # Logger object must be at minimum level; only accepts `int`
     useLevel = int(np.min([fileLevel, strLevel]))
     logger.setLevel(useLevel)
 
     if(dateFmt is None): dateFmt = '%Y/%m/%d %H:%M:%S'
 
-    ## Log to file
-    #  -----------
+    # Log to file
+    # -----------
     if(tofile is not None):
         zio.checkPath(tofile)
 
@@ -101,8 +95,7 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
         fileHandler.setLevel(fileLevel)
         logger.addHandler(fileHandler)
 
-
-    ## Log To stdout
+    # Log To stdout
     #  -------------
     if(tostr):
         # Create default formatting for stream output
@@ -117,13 +110,9 @@ def _getLogger(name, strFmt=None, fileFmt=None, dateFmt=None, strLevel=None, fil
 
     return logger
 
-# _getLogger()
-
-
 
 def defaultLogger(fname, log=None, sets=None):
-    """
-    Create a basic ``logging.Logger`` object, logging to stream and file.
+    """Create a basic ``logging.Logger`` object, logging to stream and file.
 
     Arguments
     ---------
@@ -149,5 +138,3 @@ def defaultLogger(fname, log=None, sets=None):
     log = _getLogger(None, tostr=True, tofile=filename, strLevel=level, fileLevel=logging.DEBUG)
 
     return log
-
-# defaultLogger()

@@ -4,9 +4,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import datetime
-import numpy as np
 
-import Settings, SourceList, MyLogger
+import Settings
+import SourceList
+import MyLogger
 
 
 _LOG_FILENAME = "feeder.log"
@@ -19,8 +20,8 @@ def main():
 
     beg = datetime.now()
 
-    ## Initialization
-    #  --------------
+    # Initialization
+    # --------------
     sets = Settings.Settings()
     log = MyLogger.defaultLogger(_LOG_FILENAME, sets=sets)
     log.info("Feeder.py")
@@ -36,8 +37,7 @@ def main():
     log.info("Initializing SourceList")
     sourceList = SourceList.SourceList(log=log, sets=sets)
     log.info("Loading Feeds")
-    #sourceList.getFeeds()
-
+    # sourceList.getFeeds()
 
     # Print New Articles
     for ii, src in enumerate(sourceList.sources):
@@ -45,19 +45,16 @@ def main():
         print("{0:3d} : {1}".format(ii, src.str()))
 
         if(src.valid):
-            for jj,art in enumerate(src.articles):
+            for jj, art in enumerate(src.articles):
                 print("\t{0:3d} : {1}".format(jj, art.str()))
 
         else:
             print("\tINVALID")
 
-
     end = datetime.now()
     log.info("Done After %s\n" % (str(end-beg)))
 
     return
-
-# } main()
 
 
 def loadSources(sourceList, log):

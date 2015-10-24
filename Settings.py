@@ -25,43 +25,37 @@ STR_TITLE_LEN = 100
 STR_TIME_LEN  = 30
 SOURCE_FILE_TYPE = '.json'
 
+
 class Settings(object):
     """
-
     """
-
-    ## Implement as Singleton
-    #  ----------------------
     __instance = None
+
+    # Implement as Singleton
+    # ----------------------
     def __new__(cls):
-        if cls.__instance == None:
+        if cls.__instance is None:
             cls.__instance = object.__new__(cls)
         return cls.__instance
-
 
     def __init__(self):
         """
         """
-
-        ## Basic Parameters
-        #  ----------------
+        # Basic Parameters
+        # ----------------
         self.verbose = True
         self.debug = False
 
-        ## Files and Directories
-        #  ---------------------
+        # Files and Directories
+        # ---------------------
         self.dir_log = "./log/"
         self.dir_data = "./data/"
 
         self.file_sourcelist = self.dir_data + "sourcelist.conf"
 
-        ## Internal Parameters
-        #  -------------------
+        # Internal Parameters
+        # -------------------
         self.version = __version__
-
-
-# } class Settings
-
 
 
 def getParser(sets):
@@ -71,8 +65,8 @@ def getParser(sets):
 
     parser = argparse.ArgumentParser()
 
-    ## Create Arguments
-    #  ----------------
+    # Create Arguments
+    # ----------------
     parser.add_argument("-v", "--verbose",
                         action="store_true", dest="verbose", default=sets.verbose,
                         help="print verbose output to log")
@@ -87,16 +81,14 @@ def getParser(sets):
 
     return parser
 
-# } getParser()
-
 
 def getArgs(parser, sets):
     """
     Modify the ``Settings`` object to the command line arguments, return arguments.
     """
 
-    ## Parse and Store Arguments
-    #  -------------------------
+    # Parse and Store Arguments
+    # -------------------------
     args = parser.parse_args()
 
     sets.verbose = args.verbose
@@ -104,5 +96,3 @@ def getArgs(parser, sets):
     sets.file_sourcelist = args.SRC_FILE
 
     return args, sets
-
-# } getArgs()

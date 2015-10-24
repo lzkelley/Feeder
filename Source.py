@@ -11,15 +11,17 @@ Methods
     ent_to_dict :
     dict_to_ent :
 
-
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import feedparser, time, json, os
+import feedparser
+import time
+import json
+import os
 from bs4 import BeautifulSoup
 import numpy as np
 
-import MyLogger, Settings
+import Settings
 
 
 class Article(object):
@@ -49,7 +51,6 @@ class Article(object):
             self.summary = None
             return
 
-
         if(self.time_updated is not None):
             self.time_updated_str = time.asctime(self.time_updated)
 
@@ -64,7 +65,6 @@ class Article(object):
         self.valid = True
         return
 
-
     def str(self):
         """
         Note: DO NOT OVERRIDE `__str__` returning unicode!
@@ -74,12 +74,9 @@ class Article(object):
                              w0=Settings.STR_TITLE_LEN, w1=Settings.STR_TIME_LEN)
         return myStr
 
-
     def _hasGet(self, ent, key):
         if(hasattr(ent, key)): return getattr(ent, key)
         else: return None
-
-
 
 
 class Source(object):
@@ -97,14 +94,13 @@ class Source(object):
 
     """
 
-
     def __init__(self, url, name='', subname='', filename='', filetime=None):
-        ## Parameters Loaded from SourceList files
+        # Parameters Loaded from SourceList files
         self.url = url
         self.name = name
         self.subname = subname
 
-        ## Set filename, construct if needed
+        # Set filename, construct if needed
         if(len(filename) > 0): self._filename = filename
         else:                    self._filename = self._getFilename()
         self.file_time = filetime
@@ -125,8 +121,6 @@ class Source(object):
 
         return
 
-
-
     def str(self):
         """
         Construct a string description of this object using its title and time.
@@ -136,7 +130,6 @@ class Source(object):
         myStr = "{0} - {1}"
         myStr = myStr.format(self.title, self.time_str)
         return myStr
-
 
     def getFeed(self):
         """
@@ -158,7 +151,7 @@ class Source(object):
         self.status = feed.status
 
         # Check if source feed seems valid
-        self.valid = False # Make sure this is False by default
+        self.valid = False  # Make sure this is False by default
         if(self.status != 200 or not hasattr(feed, 'feed') or not hasattr(feed.feed, 'title')):
             return False
 
@@ -192,8 +185,6 @@ class Source(object):
         self.valid = True
         return True
 
-
-
     def loadArticles(self, fname=None):
         """
         """
@@ -221,8 +212,6 @@ class Source(object):
 
         return arts
 
-
-
     def saveArticles(self, fname=None):
         """
         """
@@ -238,7 +227,6 @@ class Source(object):
             print(estr)
             return False
 
-
         arts = []
         if(os.path.exists(fname)):
             print("Path '%s' exists" % (fname))
@@ -247,7 +235,6 @@ class Source(object):
 
         else:
             print("Path '%s' does not exist" % (fname))
-
 
         titles = [aa.title for aa in arts]
         newArts = 0
@@ -258,7 +245,7 @@ class Source(object):
 
         print("Adding %d new articles" % (newArts))
 
-        ## Convert articles to string dictionaries
+        # Convert articles to string dictionaries
         print("Converting entries to dictionaries")
         data = [ent_to_dict(aa._ent) for aa in arts]
 
@@ -270,13 +257,10 @@ class Source(object):
             print(estr)
             return False
 
-
         print("Saved")
         self.saved = True
 
         return True
-
-
 
     def _strTimes(self):
         """
@@ -287,7 +271,6 @@ class Source(object):
         if(self.article_time is not None): self.article_time_str = time.asctime(self.article_time)
         if(self.file_time is not None): self.file_time_str = time.asctime(self.file_time)
         return
-
 
     def _mostRecent(self):
         """
@@ -306,7 +289,6 @@ class Source(object):
 
         return recent
 
-
     def _hasGet(self, feed, key):
         """
         Check for attribute ``key`` in given feed or feed.feed.  Return ``None`` if neither.
@@ -318,7 +300,6 @@ class Source(object):
             return getattr(feed.feed, key)
 
         return None
-
 
     def _getFilename(self):
         """
@@ -340,7 +321,7 @@ class Source(object):
         fname = self.name.strip() + '_' + self.subname.strip()
         # If candidate is not long enough, append cleaned-``url`` string
         if(len(fname) <= Settings.FILENAME_MIN_LEN):
-            urlStr = self.url.strip().replace('http://','').replace('www.','').split('/')[0]
+            urlStr = self.url.strip().replace('http://', '').replace('www.', '').split('/')[0]
             fname += '__' + urlStr
 
         # Remove everything but underscore ('_') and alphanumeric characters
@@ -349,7 +330,6 @@ class Source(object):
         fname = Settings.Settings().dir_data + fname + Settings.SOURCE_FILE_TYPE
 
         return fname
-
 
 
 def ent_to_dict(ent):
@@ -362,13 +342,10 @@ def ent_to_dict(ent):
     # Convert ``struct_time`` objects to strings
     for key in list(dic.keys()):
         if(key.endswith('_parsed')):
-            struct_time = dic[key]
             strTime = "{:.3f}".format(time.mktime(dic[key]))
             dic[key] = strTime
 
-
     return dic
-
 
 
 def dict_to_ent(dic):
